@@ -158,6 +158,10 @@ export async function getTokenBalances(address: string, chain: ChainConfig): Pro
             '0x7f5c764cbc14f9669b88837ca1490cca17c31607', // Optimism USDC.e
             '0x94b008aa00579c1307b0ef2c499ad98a8ce58e58', // Optimism USDT
             '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913', // Base USDC
+            '0xb97ef9ef8734c71904d8002f8b6bc66dd9c48a6e', // Avalanche USDC native
+            '0xa7d7079b0fead91f3e65f86e8915cb59c1a4c664', // Avalanche USDC.e
+            '0x9702230a8ea53601f5cd2dc00fdbc13d4df4a8c7', // Avalanche USDT native
+            // BNB Chain stablecoins use 18 decimals — not listed here
           ].includes(tAddr)
           const decimals = is6Decimal ? 6 : 18
           const bal = Number(BigInt(t.tokenBalance)) / Math.pow(10, decimals)

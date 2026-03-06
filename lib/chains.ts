@@ -122,6 +122,48 @@ export const CHAINS: Record<string, ChainConfig> = {
     lidoToken: '0xc1cba3fcea344f92d9239c08c0568f6f2f0ee452', // wstETH on Base
     supportsENS: false,
   },
+
+  avalanche: {
+    id: 43114,
+    slug: 'avalanche',
+    name: 'Avalanche',
+    icon: 'AVAX',
+    alchemyNetwork: 'avax-mainnet',
+    nativeCurrencySymbol: 'AVAX',
+    stablecoinAddresses: new Set([
+      '0xb97ef9ef8734c71904d8002f8b6bc66dd9c48a6e', // USDC native
+      '0xa7d7079b0fead91f3e65f86e8915cb59c1a4c664', // USDC.e
+      '0x9702230a8ea53601f5cd2dc00fdbc13d4df4a8c7', // USDT native
+      '0xd586e7f844cea2f87f50152499bcdb71ba8a5e7',  // DAI
+    ]),
+    aaveV3Tokens: new Set([
+      '0x625e7708f30ca75bfd92586e17077590c60eb4cd', // aAvaUSDC
+      '0x82e64f49ed5ec1bc6e43dad4fc8af9bb3a2312e',  // aAvaDAI
+      '0xe50fa9b3c56ffb159cb0fca61f5c9d750e8128c8', // aAvaWETH
+    ]),
+    lidoToken: null,
+    supportsENS: false,
+  },
+
+  bnb: {
+    id: 56,
+    slug: 'bnb',
+    name: 'BNB Chain',
+    icon: 'BNB',
+    alchemyNetwork: 'bnb-mainnet',
+    nativeCurrencySymbol: 'BNB',
+    // Note: BNB Chain stablecoins use 18 decimals (not 6)
+    stablecoinAddresses: new Set([
+      '0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d', // USDC (18 decimals)
+      '0x55d398326f99059ff775485246999027b3197955', // USDT (18 decimals)
+      '0xe9e7cea3dedca5984780bafc599bd69add087d56', // BUSD (18 decimals)
+      '0x1af3f329e8be154074d8769d1ffa4ee058b1dbc3', // DAI (18 decimals)
+    ]),
+    // Aave V3 is not deployed on BNB Chain
+    aaveV3Tokens: new Set<string>(),
+    lidoToken: null,
+    supportsENS: false,
+  },
 }
 
 export function getChain(slug: string | undefined | null): ChainConfig {

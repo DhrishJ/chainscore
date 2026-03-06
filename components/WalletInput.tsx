@@ -3,14 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { isAddress } from 'viem'
-
-const CHAINS = [
-  { slug: 'ethereum', name: 'Ethereum' },
-  { slug: 'polygon', name: 'Polygon' },
-  { slug: 'arbitrum', name: 'Arbitrum' },
-  { slug: 'optimism', name: 'Optimism' },
-  { slug: 'base', name: 'Base' },
-]
+import { CHAIN_LIST } from '@/lib/chains'
 
 export function WalletInput({
   placeholder = 'Enter wallet address or ENS name',
@@ -62,7 +55,7 @@ export function WalletInput({
             disabled={loading}
             className="px-3 py-3 rounded-xl bg-card border border-border text-text text-sm outline-none focus:border-accent/60 transition-all cursor-pointer"
           >
-            {CHAINS.map((c) => (
+            {CHAIN_LIST.map((c) => (
               <option key={c.slug} value={c.slug}>
                 {c.name}
               </option>
