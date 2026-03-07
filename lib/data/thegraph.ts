@@ -1,6 +1,6 @@
 // The Graph decentralized network gateway subgraph IDs
 const SUBGRAPH_IDS = {
-  aaveV2: 'Cd2gEDVeqnjBn1hSeqFMitw8Q1iiyV9FYUZkLNRcL57s',
+  // Aave V2 subgraph deprecated on The Graph decentralized network
   aaveV3: 'GQFbb95cE6d8mV989mL5figjaGaKCQB3xqYrr1bRyXqF',
   compoundV2: '6Wp9hNSvHBsP2GWy2DNHFHoLN5FZP9eciLKr7EBTq1rb',
 }
@@ -42,28 +42,18 @@ export async function getAaveActivity(address: string, chainSlug = 'ethereum'): 
     }
   `
 
-  const [v2, v3] = await Promise.allSettled([
-    queryGraph(gatewayUrl(SUBGRAPH_IDS.aaveV2), query, { user }),
-    queryGraph(gatewayUrl(SUBGRAPH_IDS.aaveV3), query, { user }),
-  ])
-
   let borrows = 0, repays = 0, liquidations = 0
   const errors: string[] = []
 
-  if (v2.status === 'fulfilled' && v2.value) {
-    borrows += v2.value.borrows?.length || 0
-    repays += v2.value.repays?.length || 0
-    liquidations += v2.value.liquidationCalls?.length || 0
-  } else if (v2.status === 'rejected') {
-    errors.push(`v2: ${v2.reason}`)
-  }
-
-  if (v3.status === 'fulfilled' && v3.value) {
-    borrows += v3.value.borrows?.length || 0
-    repays += v3.value.repays?.length || 0
-    liquidations += v3.value.liquidationCalls?.length || 0
-  } else if (v3.status === 'rejected') {
-    errors.push(`v3: ${v3.reason}`)
+  try {
+    const v3 = await queryGraph(gatewayUrl(SUBGRAPH_IDS.aaveV3), query, { user })
+    if (v3) {
+      borrows += v3.borrows?.length || 0
+      repays += v3.repays?.length || 0
+      liquidations += v3.liquidationCalls?.length || 0
+    }
+  } catch (e) {
+    errors.push(`v3: ${e}`)
   }
 
   return {
