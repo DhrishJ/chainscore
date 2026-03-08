@@ -128,7 +128,7 @@ async function fetchAllBorrowers(subgraphId, label) {
       query($lastId: String!) {
         liquidationCalls(first: 1000, orderBy: id, orderDirection: asc, where: { id_gt: $lastId }) {
           id
-          borrower
+          user { id }
         }
       }
     `, { lastId })
@@ -137,7 +137,7 @@ async function fetchAllBorrowers(subgraphId, label) {
     if (!items.length) break
 
     for (const l of items) {
-      const addr = l.borrower.toLowerCase()
+      const addr = l.user.id.toLowerCase()
       if (borrowers.has(addr)) borrowers.get(addr).liquidations++
     }
 

@@ -38,7 +38,7 @@ export async function getAaveActivity(address: string, chainSlug = 'ethereum'): 
     query($user: String!) {
       borrows(where: { user: $user }, first: 1000) { id }
       repays(where: { user: $user }, first: 1000) { id }
-      liquidationCalls(where: { borrower: $user }, first: 100) { id }
+      liquidationCalls(where: { user: $user }, first: 100) { id }
     }
   `
 
