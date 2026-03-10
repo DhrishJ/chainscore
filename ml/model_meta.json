@@ -1,0 +1,30 @@
+{
+  "feature_names": [
+    "wallet_age_days",
+    "wallet_age_months",
+    "tx_count",
+    "active_months_12",
+    "aave_borrows",
+    "compound_borrows",
+    "total_borrows",
+    "protocols_used_count",
+    "has_uniswap_lp",
+    "has_staked_eth",
+    "has_eth",
+    "has_ens",
+    "is_gnosis_safe",
+    "total_portfolio_usd",
+    "stablecoin_pct"
+  ],
+  "calibration": {
+    "p10": 0.377445250749588,
+    "score_at_p10": 400,
+    "p50": 0.5259051322937012,
+    "score_at_p50": 580,
+    "p90": 0.6022788882255554,
+    "score_at_p90": 750,
+    "score_min": 300,
+    "score_max": 850
+  },
+  "model_path": "model.json"
+}

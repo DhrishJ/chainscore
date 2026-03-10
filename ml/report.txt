@@ -1,0 +1,29 @@
+ChainScore — Model Training Report
+========================================
+Accuracy:       0.6221
+Precision:      0.6488
+Recall:         0.7315
+F1 Score:       0.6877
+AUC-ROC:        0.6529
+CV AUC (5-fold): 0.6409 +/- 0.0264
+
+Confusion Matrix (TN FP / FN TP):
+  [108, 118]
+  [80, 218]
+
+Feature Importances (gain):
+  compound_borrows               0.1694
+  protocols_used_count           0.0891
+  has_staked_eth                 0.0856
+  has_eth                        0.0730
+  wallet_age_months              0.0727
+  total_borrows                  0.0712
+  wallet_age_days                0.0641
+  aave_borrows                   0.0639
+  tx_count                       0.0592
+  is_gnosis_safe                 0.0569
+  has_uniswap_lp                 0.0563
+  total_portfolio_usd            0.0538
+  active_months_12               0.0532
+  stablecoin_pct                 0.0316
+  has_ens                        0.0000

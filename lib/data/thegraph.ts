@@ -2,7 +2,7 @@
 const SUBGRAPH_IDS = {
   // Aave V2 subgraph deprecated on The Graph decentralized network
   aaveV3: 'GQFbb95cE6d8mV989mL5figjaGaKCQB3xqYrr1bRyXqF',
-  compoundV2: '6Wp9hNSvHBsP2GWy2DNHFHoLN5FZP9eciLKr7EBTq1rb',
+  compoundV2: '4TbqVA8p2DoBd5qDbPMwmDZv3CsJjWtxo8nVSqF2tA9a',
 }
 
 function gatewayUrl(subgraphId: string): string {
@@ -67,29 +67,33 @@ export async function getAaveActivity(address: string, chainSlug = 'ethereum'): 
 export interface CompoundActivityResult {
   borrows: number
   repays: number
+  liquidations: number
   error?: string
 }
 
 export async function getCompoundActivity(address: string, chainSlug = 'ethereum'): Promise<CompoundActivityResult> {
-  if (chainSlug !== 'ethereum') return { borrows: 0, repays: 0 }
+  if (chainSlug !== 'ethereum') return { borrows: 0, repays: 0, liquidations: 0 }
 
   const account = address.toLowerCase()
 
+  // Messari standardized lending schema
   const query = `
     query($account: String!) {
-      repayEvents(where: { borrower: $account }, first: 1000) { id }
-      borrowEvents(where: { borrower: $account }, first: 1000) { id }
+      borrows(where: { account: $account }, first: 1000) { id }
+      repays(where: { account: $account }, first: 1000) { id }
+      liquidates(where: { liquidatee: $account }, first: 100) { id }
     }
   `
 
   try {
     const data = await queryGraph(gatewayUrl(SUBGRAPH_IDS.compoundV2), query, { account })
     return {
-      borrows: data?.borrowEvents?.length || 0,
-      repays: data?.repayEvents?.length || 0,
+      borrows: data?.borrows?.length || 0,
+      repays: data?.repays?.length || 0,
+      liquidations: data?.liquidates?.length || 0,
     }
   } catch (e) {
-    return { borrows: 0, repays: 0, error: String(e) }
+    return { borrows: 0, repays: 0, liquidations: 0, error: String(e) }
   }
 }
 

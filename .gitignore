@@ -13,6 +13,9 @@ out/
 # vercel
 .vercel
 
+# ML training data (can be large)
+ml/data/
+
 # misc
 .DS_Store
 *.pem

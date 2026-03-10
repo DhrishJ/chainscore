@@ -37,6 +37,7 @@ export interface RawWalletData {
   aaveLiquidations: number
   compoundBorrows: number
   compoundRepays: number
+  compoundLiquidations: number
   hasUniswapLP: boolean
   hasStakedETH: boolean
   hasGovernanceVote: boolean

@@ -12,7 +12,7 @@ import { WalletInput } from '@/components/WalletInput'
 import { getFirstTransaction, getTransactionHistory } from '@/lib/data/etherscan'
 import { getTokenBalances } from '@/lib/data/alchemy'
 import { getAaveActivity, getCompoundActivity, getUniswapActivity } from '@/lib/data/thegraph'
-import { computeScore } from '@/lib/data/scorer'
+import { computeScore } from '@/lib/data/mlScorer'
 import { recentScores } from '@/lib/recentScores'
 import { getChain, CHAIN_LIST } from '@/lib/chains'
 import type { ScoreResult, RawWalletData } from '@/types'
@@ -91,7 +91,7 @@ async function resolveAndScore(input: string, chainSlug: string): Promise<ScoreR
   const compoundResult =
     compoundData.status === 'fulfilled'
       ? compoundData.value
-      : { borrows: 0, repays: 0, error: 'fetch failed' }
+      : { borrows: 0, repays: 0, liquidations: 0, error: 'fetch failed' }
   const uniswapResult =
     uniswapData.status === 'fulfilled' ? uniswapData.value : { hasLP: false, error: 'fetch failed' }
   const ensName = ensLookup.status === 'fulfilled' ? ensLookup.value : null
@@ -124,6 +124,7 @@ async function resolveAndScore(input: string, chainSlug: string): Promise<ScoreR
     aaveLiquidations: aaveResult.liquidations,
     compoundBorrows: compoundResult.borrows,
     compoundRepays: compoundResult.repays,
+    compoundLiquidations: compoundResult.liquidations,
     hasUniswapLP: uniswapResult.hasLP || tokenResult.hasUniswapLP,
     hasStakedETH: tokenResult.hasStakedETH,
     hasGovernanceVote: false,

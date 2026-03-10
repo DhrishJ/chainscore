@@ -5,7 +5,7 @@ import { mainnet } from 'viem/chains'
 import { getFirstTransaction, getTransactionHistory } from '@/lib/data/etherscan'
 import { getTokenBalances } from '@/lib/data/alchemy'
 import { getAaveActivity, getCompoundActivity, getUniswapActivity } from '@/lib/data/thegraph'
-import { computeScore } from '@/lib/data/scorer'
+import { computeScore } from '@/lib/data/mlScorer'
 import { getChain } from '@/lib/chains'
 import type { RawWalletData } from '@/types'
 import { recentScores } from '@/lib/recentScores'
@@ -65,7 +65,7 @@ export async function GET(
   const txHistResult = txHistory.status === 'fulfilled' ? txHistory.value : { txCount: 0, activeMonthsLast12: 0, error: 'fetch failed' }
   const tokenResult = tokenData.status === 'fulfilled' ? tokenData.value : { totalPortfolioUSD: 0, stablecoinPct: 0, hasETH: false, hasStakedETH: false, hasENS: false, hasAave: false, hasCompound: false, hasUniswapLP: false, isGnosisSafe: false, error: 'fetch failed' }
   const aaveResult = aaveData.status === 'fulfilled' ? aaveData.value : { borrows: 0, repays: 0, liquidations: 0, error: 'fetch failed' }
-  const compoundResult = compoundData.status === 'fulfilled' ? compoundData.value : { borrows: 0, repays: 0, error: 'fetch failed' }
+  const compoundResult = compoundData.status === 'fulfilled' ? compoundData.value : { borrows: 0, repays: 0, liquidations: 0, error: 'fetch failed' }
   const uniswapResult = uniswapData.status === 'fulfilled' ? uniswapData.value : { hasLP: false, error: 'fetch failed' }
   const ensName = ensLookup.status === 'fulfilled' ? ensLookup.value : null
 
@@ -97,6 +97,7 @@ export async function GET(
     aaveLiquidations: aaveResult.liquidations,
     compoundBorrows: compoundResult.borrows,
     compoundRepays: compoundResult.repays,
+    compoundLiquidations: compoundResult.liquidations,
     hasUniswapLP: uniswapResult.hasLP || tokenResult.hasUniswapLP,
     hasStakedETH: tokenResult.hasStakedETH,
     hasGovernanceVote: false,
