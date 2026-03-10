@@ -170,117 +170,112 @@ function calibrateScore(prob: number): number {
 }
 
 // ─────────────────────────────────────────────────────────────
-// Factor explanations (for UI — separate from ML scoring)
+// Factor signals — 4 groups derived from ML feature importances
+//
+// Weights reflect actual XGBoost gain importances (grouped):
+//   Lending History:  30%  (compound_borrows 17%, aave_borrows 6%, total_borrows 7%)
+//   Wallet History:   25%  (wallet_age 13%, tx_count 6%, active_months 5%)
+//   DeFi Activity:    23%  (protocols 9%, staked_eth 9%, uniswap_lp 6%)
+//   Portfolio:        22%  (has_eth 7%, gnosis_safe 6%, portfolio_usd 5%, stablecoin 3%)
 // ─────────────────────────────────────────────────────────────
 
 function buildFactors(data: RawWalletData, walletAgeDays: number, walletAgeMonths: number): Factor[] {
   const totalBorrows = data.aaveBorrows + data.compoundBorrows
-  const totalRepays  = data.aaveRepays  + data.compoundRepays
-  const totalLiquidations = data.aaveLiquidations + (data.compoundLiquidations ?? 0)
-  const hasRepayError = Boolean(data.errors?.aave || data.errors?.compound)
+  const hasLendingError = Boolean(data.errors?.aave || data.errors?.compound)
 
-  // Wallet age (0–100)
-  const f1Raw = walletAgeMonths < 6 ? 10 : walletAgeMonths < 12 ? 25 : walletAgeMonths < 24 ? 50 : walletAgeMonths < 36 ? 70 : walletAgeMonths < 48 ? 85 : 100
-
-  // Transaction volume (0–100)
-  let f2Raw = data.txCount < 10 ? 10 : data.txCount < 50 ? 30 : data.txCount < 200 ? 55 : data.txCount < 500 ? 75 : data.txCount < 1000 ? 90 : 100
-  if (data.activeMonthsLast12 >= 8) f2Raw = Math.min(100, f2Raw + 10)
-
-  // DeFi breadth (0–100)
-  const protocols = data.protocolsUsed.length
-  let f3Raw = protocols === 0 ? 0 : protocols === 1 ? 20 : protocols === 2 ? 40 : protocols === 3 ? 60 : protocols === 4 ? 80 : 100
-  if (data.hasUniswapLP) f3Raw = Math.min(100, f3Raw + 10)
-  if (data.hasStakedETH) f3Raw = Math.min(100, f3Raw + 10)
-  if (data.hasGovernanceVote) f3Raw = Math.min(100, f3Raw + 10)
-
-  // Repayment (0–100)
-  let f4Raw = 50
-  if (!hasRepayError) {
-    if (totalBorrows === 0) {
-      f4Raw = totalLiquidations === 0 ? 75 : 60
-    } else {
-      const rate = totalRepays / totalBorrows
-      if (rate <= 0) f4Raw = 0
-      else if (rate < 0.5) f4Raw = Math.round((rate / 0.5) * 40)
-      else if (rate < 0.75) f4Raw = Math.round(40 + ((rate - 0.5) / 0.25) * 25)
-      else if (rate < 0.9) f4Raw = Math.round(65 + ((rate - 0.75) / 0.15) * 17)
-      else if (rate < 1.0) f4Raw = Math.round(82 + ((rate - 0.9) / 0.1) * 18)
-      else f4Raw = 100
-      if (totalLiquidations === 0) f4Raw = Math.min(100, f4Raw + 15)
-      if (totalLiquidations >= 1) f4Raw = Math.max(0, f4Raw - 20)
-    }
+  // ── Lending History (30%) ──────────────────────────────────
+  // Compound borrowing is the strongest single signal (17% importance)
+  let f1Raw = 20 // baseline: no history
+  if (totalBorrows > 0) {
+    if (data.compoundBorrows > 0) f1Raw += 40
+    if (data.aaveBorrows > 0)     f1Raw += 25
+    const borrowBonus = Math.min(15, Math.floor(totalBorrows / 5) * 3)
+    f1Raw = Math.min(100, f1Raw + borrowBonus)
   }
 
-  // Portfolio stability (0–100)
-  let f5Raw = 0
-  if (data.totalPortfolioUSD > 1000) f5Raw += 20
-  if (data.stablecoinPct > 10) f5Raw += 15
-  if (data.hasETH && walletAgeDays > 365) f5Raw += 20
-  if (data.hasENS) f5Raw += 15
-  if (data.isGnosisSafe) f5Raw += 30
-  f5Raw = Math.min(100, f5Raw)
+  const f1Explanation = hasLendingError
+    ? 'Unable to fully query lending history. Score estimated from available data.'
+    : totalBorrows === 0
+    ? 'No on-chain borrowing detected. Using Aave or Compound builds a verifiable credit history.'
+    : data.compoundBorrows > 0 && data.aaveBorrows > 0
+    ? `Active on both Compound (${data.compoundBorrows} loans) and Aave (${data.aaveBorrows} loans) — strong multi-protocol lending history.`
+    : data.compoundBorrows > 0
+    ? `${data.compoundBorrows} Compound loan(s) detected. Adding Aave activity would further strengthen this signal.`
+    : `${data.aaveBorrows} Aave loan(s) detected. Adding Compound activity would further strengthen this signal.`
+
+  // ── Wallet History (25%) ───────────────────────────────────
+  let f2Raw = walletAgeMonths < 6 ? 10 : walletAgeMonths < 12 ? 25 : walletAgeMonths < 24 ? 45 : walletAgeMonths < 36 ? 65 : walletAgeMonths < 48 ? 80 : 90
+  const txBonus = data.txCount < 10 ? 0 : data.txCount < 50 ? 3 : data.txCount < 200 ? 6 : data.txCount < 500 ? 8 : 10
+  if (data.activeMonthsLast12 >= 8) f2Raw += 5
+  f2Raw = Math.min(100, f2Raw + txBonus)
+
+  const f2Explanation = walletAgeMonths < 6
+    ? `Wallet is ${walletAgeMonths} months old with ${data.txCount} transactions. Older, more active wallets score higher.`
+    : data.activeMonthsLast12 >= 8
+    ? `${walletAgeMonths}-month-old wallet with ${data.txCount} transactions active across ${data.activeMonthsLast12} of the last 12 months — consistent usage.`
+    : `${walletAgeMonths}-month-old wallet, ${data.txCount} transactions. Try to stay active for at least 8 months per year.`
+
+  // ── DeFi Activity (23%) ────────────────────────────────────
+  const protocols = data.protocolsUsed.length
+  let f3Raw = protocols === 0 ? 0 : protocols === 1 ? 30 : protocols === 2 ? 55 : protocols === 3 ? 75 : 90
+  if (data.hasStakedETH) f3Raw = Math.min(100, f3Raw + 10)
+  if (data.hasUniswapLP)  f3Raw = Math.min(100, f3Raw + 8)
+  if (data.hasGovernanceVote) f3Raw = Math.min(100, f3Raw + 5)
+
+  const f3Explanation = protocols === 0
+    ? 'No DeFi protocol usage detected. Staking ETH, providing liquidity, or borrowing on lending protocols all strengthen this signal.'
+    : `Active on ${protocols} protocol(s): ${data.protocolsUsed.join(', ')}.${data.hasStakedETH ? ' ETH staking detected.' : ''}${data.hasUniswapLP ? ' Uniswap LP position detected.' : ''}`
+
+  // ── Portfolio & Identity (22%) ─────────────────────────────
+  let f4Raw = 0
+  if (data.hasETH)                          f4Raw += 30
+  if (data.isGnosisSafe)                    f4Raw += 25
+  if (data.totalPortfolioUSD > 10000)       f4Raw += 20
+  else if (data.totalPortfolioUSD > 1000)   f4Raw += 12
+  else if (data.totalPortfolioUSD > 100)    f4Raw += 5
+  if (data.stablecoinPct > 10)              f4Raw += 12
+  if (data.hasENS)                          f4Raw += 13
+  f4Raw = Math.min(100, f4Raw)
+
+  const f4Explanation = [
+    data.isGnosisSafe ? 'Gnosis Safe multisig — highest trust signal.' : '',
+    data.hasENS ? 'ENS name registered.' : '',
+    data.hasETH ? 'ETH holdings detected.' : '',
+    data.totalPortfolioUSD > 1000 ? `Portfolio value $${Math.round(data.totalPortfolioUSD).toLocaleString()}.` : '',
+    data.stablecoinPct > 10 ? `${Math.round(data.stablecoinPct)}% stablecoin allocation.` : '',
+  ].filter(Boolean).join(' ') || 'No strong portfolio signals. Holding ETH, registering an ENS name, or using a Gnosis Safe multisig all improve this.'
 
   return [
     {
-      name: 'Wallet Age',
+      name: 'Lending History',
       rawScore: f1Raw,
-      weight: 0.20,
-      weightedScore: f1Raw * 0.20,
-      explanation: walletAgeMonths < 6
-        ? 'Your wallet is less than 6 months old. A longer on-chain history signals reliability.'
-        : walletAgeMonths < 24
-        ? `Your wallet is ${walletAgeMonths} months old. Wallets over 2 years score significantly higher.`
-        : `Your wallet is ${walletAgeMonths} months old — a solid on-chain history.`,
-      limitedData: Boolean(data.errors?.etherscan),
+      weight: 0.30,
+      weightedScore: f1Raw * 0.30,
+      explanation: f1Explanation,
+      limitedData: hasLendingError,
     },
     {
-      name: 'Transaction Volume',
+      name: 'Wallet History',
       rawScore: f2Raw,
-      weight: 0.15,
-      weightedScore: f2Raw * 0.15,
-      explanation: data.txCount < 10
-        ? `Only ${data.txCount} transactions detected. More activity demonstrates consistent usage.`
-        : data.activeMonthsLast12 >= 8
-        ? `${data.txCount} transactions across ${data.activeMonthsLast12} active months in the past year.`
-        : `${data.txCount} total transactions. Stay active for at least 8 months per year.`,
+      weight: 0.25,
+      weightedScore: f2Raw * 0.25,
+      explanation: f2Explanation,
       limitedData: Boolean(data.errors?.etherscan),
     },
     {
-      name: 'DeFi Protocol Breadth',
+      name: 'DeFi Activity',
       rawScore: f3Raw,
-      weight: 0.20,
-      weightedScore: f3Raw * 0.20,
-      explanation: data.protocolsUsed.length === 0
-        ? 'No DeFi protocol usage detected. Using lending, DEXes, or staking improves this factor.'
-        : `Used ${data.protocolsUsed.length} protocol(s): ${data.protocolsUsed.join(', ')}.${data.hasUniswapLP ? ' LP positions detected (+bonus).' : ''}${data.hasStakedETH ? ' ETH staking detected (+bonus).' : ''}`,
+      weight: 0.23,
+      weightedScore: f3Raw * 0.23,
+      explanation: f3Explanation,
       limitedData: Boolean(data.errors?.uniswap),
     },
     {
-      name: 'Repayment Behavior',
+      name: 'Portfolio & Identity',
       rawScore: f4Raw,
-      weight: 0.35,
-      weightedScore: f4Raw * 0.35,
-      explanation: hasRepayError
-        ? 'Unable to fully query lending protocol history. Score estimated from available data.'
-        : totalBorrows === 0
-        ? 'No borrowing history. A clean repayment record with loans would score higher.'
-        : totalLiquidations > 0
-        ? `${totalLiquidations} liquidation(s) detected — this significantly reduces your score.`
-        : `Repaid ${totalRepays} of ${totalBorrows} loan events with no liquidations.`,
-      limitedData: hasRepayError,
-    },
-    {
-      name: 'Portfolio Stability',
-      rawScore: f5Raw,
-      weight: 0.10,
-      weightedScore: f5Raw * 0.10,
-      explanation: [
-        data.isGnosisSafe ? 'Gnosis Safe multisig detected (+30).' : '',
-        data.hasENS ? 'ENS name registered (+15).' : '',
-        data.hasETH && walletAgeDays > 365 ? 'Long-term ETH holder (+20).' : '',
-        data.stablecoinPct > 10 ? `${Math.round(data.stablecoinPct)}% stablecoin allocation (+15).` : '',
-        data.totalPortfolioUSD > 1000 ? 'Portfolio value > $1,000 (+20).' : '',
-      ].filter(Boolean).join(' ') || 'Low portfolio stability signals. Hold ETH, register ENS, or use a multisig.',
+      weight: 0.22,
+      weightedScore: f4Raw * 0.22,
+      explanation: f4Explanation,
       limitedData: Boolean(data.errors?.alchemy),
     },
   ]

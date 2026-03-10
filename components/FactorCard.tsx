@@ -23,7 +23,7 @@ export function FactorCard({ factor }: FactorCardProps) {
             {factor.name}
           </h3>
           <p className="text-muted text-xs mt-0.5">
-            Weight: {Math.round(factor.weight * 100)}%
+            ML weight: {Math.round(factor.weight * 100)}%
           </p>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">

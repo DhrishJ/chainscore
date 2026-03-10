@@ -330,9 +330,14 @@ export default async function ScorePage({ params, searchParams }: Props) {
 
           {/* Factor breakdown */}
           <div>
-            <h2 className="font-grotesk font-semibold text-muted mb-3 text-xs uppercase tracking-wider">
-              Score Breakdown
-            </h2>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="font-grotesk font-semibold text-muted text-xs uppercase tracking-wider">
+                What Drives Your Score
+              </h2>
+              <span className="px-2 py-0.5 rounded-full bg-accent/10 text-accent text-xs border border-accent/20 font-medium">
+                ML model
+              </span>
+            </div>
             <div className="flex flex-col gap-3">
               {result.factors.map((factor) => (
                 <FactorCard key={factor.name} factor={factor} />
