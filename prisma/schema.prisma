@@ -1,0 +1,138 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Wallet {
+  address          String            @id
+  ens              String?
+  score            Int
+  grade            String
+  percentile       Float
+  lastUpdated      DateTime          @updatedAt
+  scoreHistory     ScoreSnapshot[]
+  listingsAsLender LoanListing[]     @relation("LenderListings")
+  loansAsBorrower  Loan[]            @relation("BorrowerLoans")
+  loansAsLender    Loan[]            @relation("LenderLoans")
+  reviewsGiven     Review[]          @relation("ReviewsGiven")
+  reviewsReceived  Review[]          @relation("ReviewsReceived")
+  applications     LoanApplication[]
+}
+
+model ScoreSnapshot {
+  id            String   @id @default(cuid())
+  walletAddress String
+  score         Int
+  timestamp     DateTime @default(now())
+  wallet        Wallet   @relation(fields: [walletAddress], references: [address])
+}
+
+model LoanListing {
+  id                 String            @id @default(cuid())
+  lenderAddress      String
+  lenderScore        Int
+  amount             Float
+  currency           String
+  minAPR             Float
+  maxAPR             Float
+  durationDays       Int
+  minBorrowerScore   Int
+  collateralRequired Float
+  status             ListingStatus     @default(OPEN)
+  createdAt          DateTime          @default(now())
+  expiresAt          DateTime
+  terms              String
+  lender             Wallet            @relation("LenderListings", fields: [lenderAddress], references: [address])
+  applications       LoanApplication[]
+  loan               Loan?
+}
+
+model LoanApplication {
+  id              String            @id @default(cuid())
+  listingId       String
+  borrowerAddress String
+  borrowerScore   Int
+  requestedAmount Float
+  message         String?
+  status          ApplicationStatus @default(PENDING)
+  createdAt       DateTime          @default(now())
+  listing         LoanListing       @relation(fields: [listingId], references: [id])
+  borrower        Wallet            @relation(fields: [borrowerAddress], references: [address])
+  loan            Loan?
+}
+
+model Loan {
+  id                 String          @id @default(cuid())
+  listingId          String          @unique
+  applicationId      String          @unique
+  lenderAddress      String
+  borrowerAddress    String
+  amount             Float
+  currency           String
+  APR                Float
+  collateralAmount   Float
+  collateralCurrency String
+  feeAmount          Float           @default(0)
+  startDate          DateTime        @default(now())
+  dueDate            DateTime
+  status             LoanStatus      @default(ACTIVE)
+  txHash             String?
+  repaidAt           DateTime?
+  repaidTxHash       String?
+  listing            LoanListing     @relation(fields: [listingId], references: [id])
+  application        LoanApplication @relation(fields: [applicationId], references: [id])
+  lender             Wallet          @relation("LenderLoans", fields: [lenderAddress], references: [address])
+  borrower           Wallet          @relation("BorrowerLoans", fields: [borrowerAddress], references: [address])
+  reviews            Review[]
+}
+
+model Review {
+  id              String   @id @default(cuid())
+  loanId          String
+  reviewerAddress String
+  revieweeAddress String
+  rating          Int
+  comment         String?
+  createdAt       DateTime @default(now())
+  loan            Loan     @relation(fields: [loanId], references: [id])
+  reviewer        Wallet   @relation("ReviewsGiven", fields: [reviewerAddress], references: [address])
+  reviewee        Wallet   @relation("ReviewsReceived", fields: [revieweeAddress], references: [address])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  address   String
+  type      String
+  title     String
+  message   String
+  read      Boolean  @default(false)
+  link      String?
+  createdAt DateTime @default(now())
+}
+
+enum ListingStatus {
+  OPEN
+  MATCHED
+  ACTIVE
+  COMPLETED
+  DEFAULTED
+  EXPIRED
+}
+
+enum ApplicationStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  WITHDRAWN
+}
+
+enum LoanStatus {
+  ACTIVE
+  REPAID
+  DEFAULTED
+  LIQUIDATED
+}

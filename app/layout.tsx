@@ -1,6 +1,8 @@
 import type { Metadata } from 'next'
 import { Space_Grotesk, Inter } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
+import { Providers } from '@/components/Providers'
+import { Navbar } from '@/components/Navbar'
 import './globals.css'
 
 const spaceGrotesk = Space_Grotesk({
@@ -16,19 +18,19 @@ const inter = Inter({
 })
 
 export const metadata: Metadata = {
-  title: 'ChainScore — Ethereum Wallet Credit Score',
+  title: 'ChainScore — On-Chain Credit Score & Loan Marketplace',
   description:
-    'Free on-chain credit scoring for Ethereum wallets. 300–850 FICO-style scale based on wallet age, transaction history, DeFi activity, and repayment behavior.',
+    'Free on-chain credit scoring for Ethereum wallets and a peer-to-peer lending marketplace. 300–850 FICO-style scale. No KYC required.',
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'https://chainscore.xyz'),
   openGraph: {
-    title: 'ChainScore — Ethereum Wallet Credit Score',
-    description: 'Free on-chain credit scoring for Ethereum wallets.',
+    title: 'ChainScore — On-Chain Credit Score & Loan Marketplace',
+    description: 'Score your wallet, lend or borrow with trust-scored counterparties.',
     type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
     title: 'ChainScore',
-    description: 'Free on-chain credit scoring for Ethereum wallets.',
+    description: 'On-chain credit scores and peer-to-peer lending.',
   },
 }
 
@@ -40,7 +42,10 @@ export default function RootLayout({
   return (
     <html lang="en" className={`dark ${spaceGrotesk.variable} ${inter.variable}`}>
       <body className="min-h-screen bg-background font-sans text-text antialiased">
-        {children}
+        <Providers>
+          <Navbar />
+          {children}
+        </Providers>
         <Analytics />
       </body>
     </html>

@@ -9,8 +9,11 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@prisma/client": "^5.22.0",
     "@radix-ui/react-progress": "^1.1.8",
     "@radix-ui/react-slot": "^1.2.4",
+    "@rainbow-me/rainbowkit": "^2.2.10",
+    "@tanstack/react-query": "^5.95.2",
     "@vercel/analytics": "^1.6.1",
     "@vercel/og": "^0.6.2",
     "alchemy-sdk": "^3.4.5",
@@ -18,12 +21,15 @@
     "clsx": "^2.1.1",
     "lucide-react": "^0.577.0",
     "next": "14.2.35",
+    "prisma": "^5.22.0",
     "react": "^18",
     "react-dom": "^18",
     "recharts": "^2.12.7",
     "tailwind-merge": "^3.5.0",
     "tailwindcss-animate": "^1.0.7",
-    "viem": "^2.17.5"
+    "viem": "^2.17.5",
+    "wagmi": "^2.19.5",
+    "zustand": "^5.0.12"
   },
   "devDependencies": {
     "@types/node": "^20",
