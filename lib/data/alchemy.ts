@@ -51,6 +51,7 @@ async function alchemyNftGet(network: string, path: string): Promise<unknown> {
 export interface TokenBalancesResult {
   totalPortfolioUSD: number
   stablecoinPct: number
+  tokenDiversity: number
   hasETH: boolean
   hasStakedETH: boolean
   hasENS: boolean
@@ -126,8 +127,12 @@ export async function getTokenBalances(address: string, chain: ChainConfig): Pro
     let stablecoinBalance = 0
     let totalDetectedUSD = 0
 
+    let tokenDiversity = 0
     if (tokenRes.status === 'fulfilled') {
       const balances = (tokenRes.value as { tokenBalances: Array<{ contractAddress: string; tokenBalance: string }> }).tokenBalances
+      tokenDiversity = balances.filter(
+        t => t.tokenBalance && t.tokenBalance !== '0x0000000000000000000000000000000000000000000000000000000000000000'
+      ).length
       for (const t of balances) {
         const tAddr = t.contractAddress.toLowerCase()
         if (!t.tokenBalance || t.tokenBalance === '0x0000000000000000000000000000000000000000000000000000000000000000') continue
@@ -179,6 +184,7 @@ export async function getTokenBalances(address: string, chain: ChainConfig): Pro
     return {
       totalPortfolioUSD: totalDetectedUSD,
       stablecoinPct,
+      tokenDiversity,
       hasETH,
       hasStakedETH,
       hasENS,
@@ -191,6 +197,7 @@ export async function getTokenBalances(address: string, chain: ChainConfig): Pro
     return {
       totalPortfolioUSD: 0,
       stablecoinPct: 0,
+      tokenDiversity: 0,
       hasETH: false,
       hasStakedETH: false,
       hasENS: false,

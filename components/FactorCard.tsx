@@ -6,7 +6,7 @@ interface FactorCardProps {
 
 function barColor(score: number): string {
   if (score >= 80) return 'bg-accent'
-  if (score >= 60) return 'bg-green-400'
+  if (score >= 60) return 'bg-blue-400'
   if (score >= 40) return 'bg-warning'
   if (score >= 20) return 'bg-orange-400'
   return 'bg-danger'

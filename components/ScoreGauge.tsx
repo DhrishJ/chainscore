@@ -1,6 +1,7 @@
 'use client'
 
 import { RadialBarChart, RadialBar, ResponsiveContainer } from 'recharts'
+import { useTheme } from '@/lib/theme'
 
 interface ScoreGaugeProps {
   score: number
@@ -8,20 +9,22 @@ interface ScoreGaugeProps {
 }
 
 function scoreColor(score: number): string {
-  if (score >= 750) return '#00FF94'
-  if (score >= 650) return '#4ADE80'
+  if (score >= 750) return '#0052FF'
+  if (score >= 650) return '#3B82F6'
   if (score >= 550) return '#FFB800'
   if (score >= 450) return '#FF8C00'
   return '#FF3B5C'
 }
 
 export function ScoreGauge({ score }: ScoreGaugeProps) {
+  const { theme } = useTheme()
   // Map score 300-850 to 0-100 for the bar
   const pct = Math.round(((score - 300) / 550) * 100)
   const color = scoreColor(score)
+  const trackColor = theme === 'dark' ? '#1C2333' : '#E2E8F0'
 
   const data = [
-    { name: 'background', value: 100, fill: '#1C2333' },
+    { name: 'background', value: 100, fill: trackColor },
     { name: 'score', value: pct, fill: color },
   ]
 

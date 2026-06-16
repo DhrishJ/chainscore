@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { verifyWalletSignature } from '@/lib/auth'
+import { verifySolanaSignature, isSolanaAddress } from '@/lib/solanaAuth'
 import { isAddress } from 'viem'
 import type { Prisma } from '@prisma/client'
 
@@ -17,12 +18,14 @@ export async function GET(req: NextRequest) {
   const minDuration = searchParams.get('minDuration')
   const maxDuration = searchParams.get('maxDuration')
   const minLenderScore = searchParams.get('minLenderScore')
+  const chain = searchParams.get('chain') // 'EVM' | 'SOLANA' | null
   const sort = searchParams.get('sort') || 'newest'
   const page = parseInt(searchParams.get('page') || '1', 10)
   const limit = 20
 
   const where: Prisma.LoanListingWhereInput = { status: 'OPEN', expiresAt: { gt: new Date() } }
   if (currency) where.currency = currency
+  if (chain) where.chain = chain
   if (minAmount || maxAmount) {
     where.amount = {}
     if (minAmount) where.amount.gte = parseFloat(minAmount)
@@ -67,16 +70,28 @@ export async function POST(req: NextRequest) {
   const body = await req.json()
   const { address, signature, message, listing } = body
 
-  if (!address || !isAddress(address)) {
-    return NextResponse.json({ error: 'Invalid address' }, { status: 400 })
+  if (!address) {
+    return NextResponse.json({ error: 'Address required' }, { status: 400 })
   }
 
-  const valid = await verifyWalletSignature(address, message, signature)
+  const isSol = isSolanaAddress(address)
+
+  // Verify signature
+  let valid = false
+  if (isSol) {
+    valid = verifySolanaSignature(address, message, signature)
+  } else {
+    if (!isAddress(address)) {
+      return NextResponse.json({ error: 'Invalid address' }, { status: 400 })
+    }
+    valid = await verifyWalletSignature(address, message, signature)
+  }
   if (!valid) {
     return NextResponse.json({ error: 'Invalid signature' }, { status: 401 })
   }
 
-  const wallet = await prisma.wallet.findUnique({ where: { address: address.toLowerCase() } })
+  const walletAddress = isSol ? address : address.toLowerCase()
+  const wallet = await prisma.wallet.findUnique({ where: { address: walletAddress } })
   if (!wallet || wallet.score < 500) {
     return NextResponse.json({ error: 'ChainScore of 500+ required to post a listing' }, { status: 403 })
   }
@@ -89,7 +104,7 @@ export async function POST(req: NextRequest) {
 
   const newListing = await prisma.loanListing.create({
     data: {
-      lenderAddress: address.toLowerCase(),
+      lenderAddress: walletAddress,
       lenderScore: wallet.score,
       amount: parseFloat(amount),
       currency,
@@ -100,6 +115,7 @@ export async function POST(req: NextRequest) {
       collateralRequired: parseFloat(collateralRequired),
       expiresAt: new Date(expiresAt),
       terms: terms || '',
+      chain: isSol ? 'SOLANA' : 'EVM',
     },
   })
 

@@ -15,6 +15,14 @@ import { getAaveActivity, getCompoundActivity, getUniswapActivity } from '@/lib/
 import { computeScore } from '@/lib/data/mlScorer'
 import { recentScores } from '@/lib/recentScores'
 import { getChain, CHAIN_LIST } from '@/lib/chains'
+import { isSolanaAddress } from '@/lib/solanaAuth'
+import {
+  getSolanaTransactionHistory,
+  getSolanaBalance,
+  getSolanaTokenData,
+  getSolanaDefiActivity,
+} from '@/lib/data/helius'
+import { computeSolanaScore } from '@/lib/data/solanaScorer'
 import type { ScoreResult, RawWalletData } from '@/types'
 
 interface Props {
@@ -68,13 +76,14 @@ async function resolveAndScore(input: string, chainSlug: string): Promise<ScoreR
   const txHistResult =
     txHistory.status === 'fulfilled'
       ? txHistory.value
-      : { txCount: 0, activeMonthsLast12: 0, error: 'fetch failed' }
+      : { txCount: 0, txCount30d: 0, txCount90d: 0, txCount180d: 0, activeDaysCount: 0, activeMonthsLast12: 0, error: 'fetch failed' }
   const tokenResult =
     tokenData.status === 'fulfilled'
       ? tokenData.value
       : {
           totalPortfolioUSD: 0,
           stablecoinPct: 0,
+          tokenDiversity: 0,
           hasETH: false,
           hasStakedETH: false,
           hasENS: false,
@@ -109,27 +118,34 @@ async function resolveAndScore(input: string, chainSlug: string): Promise<ScoreR
   if (tokenResult.hasStakedETH) protocolsUsed.push(chain.slug === 'ethereum' ? 'Lido' : 'Lido (wstETH)')
 
   const rawData: RawWalletData = {
-    firstTxTimestamp: firstTxResult.timestamp,
-    txCount: txHistResult.txCount,
+    firstTxTimestamp:   firstTxResult.timestamp,
+    txCount:            txHistResult.txCount,
+    txCount30d:         txHistResult.txCount30d   ?? 0,
+    txCount90d:         txHistResult.txCount90d   ?? 0,
+    txCount180d:        txHistResult.txCount180d  ?? 0,
+    activeDaysCount:    txHistResult.activeDaysCount ?? 0,
     activeMonthsLast12: txHistResult.activeMonthsLast12,
-    totalPortfolioUSD: tokenResult.totalPortfolioUSD,
-    stablecoinPct: tokenResult.stablecoinPct,
-    hasETH: tokenResult.hasETH,
-    hasENS: tokenResult.hasENS || Boolean(ensName),
-    isGnosisSafe: tokenResult.isGnosisSafe,
-    hasAave: tokenResult.hasAave,
-    hasCompound: tokenResult.hasCompound,
-    aaveBorrows: aaveResult.borrows,
-    aaveRepays: aaveResult.repays,
-    aaveLiquidations: aaveResult.liquidations,
-    compoundBorrows: compoundResult.borrows,
-    compoundRepays: compoundResult.repays,
+    daysSinceFirstDefi: (firstTxResult.timestamp && (aaveResult.borrows > 0 || compoundResult.borrows > 0))
+      ? Math.floor((Date.now() / 1000 - firstTxResult.timestamp) / 86400) : 0,
+    totalPortfolioUSD:  tokenResult.totalPortfolioUSD,
+    stablecoinPct:      tokenResult.stablecoinPct,
+    tokenDiversity:     tokenResult.tokenDiversity ?? 0,
+    hasETH:             tokenResult.hasETH,
+    hasENS:             tokenResult.hasENS || Boolean(ensName),
+    isGnosisSafe:       tokenResult.isGnosisSafe,
+    hasAave:            tokenResult.hasAave,
+    hasCompound:        tokenResult.hasCompound,
+    aaveBorrows:        aaveResult.borrows,
+    aaveRepays:         aaveResult.repays,
+    aaveLiquidations:   aaveResult.liquidations,
+    compoundBorrows:    compoundResult.borrows,
+    compoundRepays:     compoundResult.repays,
     compoundLiquidations: compoundResult.liquidations,
-    hasUniswapLP: uniswapResult.hasLP || tokenResult.hasUniswapLP,
-    hasStakedETH: tokenResult.hasStakedETH,
-    hasGovernanceVote: false,
+    hasUniswapLP:       uniswapResult.hasLP || tokenResult.hasUniswapLP,
+    hasStakedETH:       tokenResult.hasStakedETH,
+    hasGovernanceVote:  false,
     protocolsUsed,
-    ens: ensName || (input.endsWith('.eth') ? input : null),
+    ens:                ensName || (input.endsWith('.eth') ? input : null),
     errors,
   }
 
@@ -139,8 +155,46 @@ async function resolveAndScore(input: string, chainSlug: string): Promise<ScoreR
   return result
 }
 
+async function resolveAndScoreSolana(address: string): Promise<ScoreResult | null> {
+  if (!isSolanaAddress(address)) return null
+
+  const [txHistory, balance, tokenData, defiData] = await Promise.allSettled([
+    getSolanaTransactionHistory(address),
+    getSolanaBalance(address),
+    getSolanaTokenData(address),
+    getSolanaDefiActivity(address),
+  ])
+
+  const tx = txHistory.status === 'fulfilled' ? txHistory.value : { txCount: 0, activeMonthsLast12: 0, firstTimestamp: null }
+  const bal = balance.status === 'fulfilled' ? balance.value : { solBalance: 0 }
+  const tok = tokenData.status === 'fulfilled' ? tokenData.value : { hasMSOL: false, hasJitoSOL: false, hasBSOL: false, tokenCount: 0 }
+  const defi = defiData.status === 'fulfilled' ? defiData.value : { hasJupiter: false, hasKamino: false, hasSolend: false, hasMarginfi: false, hasMarinade: false, borrowCount: 0, repayCount: 0 }
+
+  const result = computeSolanaScore({
+    firstTimestamp: tx.firstTimestamp ?? null,
+    txCount: tx.txCount,
+    activeMonthsLast12: tx.activeMonthsLast12,
+    solBalance: bal.solBalance,
+    tokenCount: tok.tokenCount,
+    hasMSOL: tok.hasMSOL,
+    hasJitoSOL: tok.hasJitoSOL,
+    hasBSOL: tok.hasBSOL,
+    hasJupiter: defi.hasJupiter,
+    hasKamino: defi.hasKamino,
+    hasSolend: defi.hasSolend,
+    hasMarginfi: defi.hasMarginfi,
+    hasMarinade: defi.hasMarinade,
+    borrowCount: defi.borrowCount,
+    repayCount: defi.repayCount,
+  })
+
+  result.address = address
+  recentScores.add({ address, score: result.score, timestamp: Date.now() })
+  return result
+}
+
 export async function generateMetadata({ params, searchParams }: Props): Promise<Metadata> {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://chainscore.xyz'
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://chainscore.dev'
   const { address } = params
 
   return {
@@ -160,7 +214,7 @@ function gradeColor(grade: string): string {
     case 'A':
       return 'text-accent border-accent/30 bg-accent/10'
     case 'B':
-      return 'text-green-400 border-green-400/30 bg-green-400/10'
+      return 'text-blue-400 border-blue-400/30 bg-blue-400/10'
     case 'C':
       return 'text-warning border-warning/30 bg-warning/10'
     case 'D':
@@ -172,7 +226,7 @@ function gradeColor(grade: string): string {
 
 function scoreTextColor(score: number): string {
   if (score >= 750) return 'text-accent'
-  if (score >= 650) return 'text-green-400'
+  if (score >= 650) return 'text-blue-400'
   if (score >= 550) return 'text-warning'
   if (score >= 450) return 'text-orange-400'
   return 'text-danger'
@@ -180,9 +234,12 @@ function scoreTextColor(score: number): string {
 
 export default async function ScorePage({ params, searchParams }: Props) {
   const { address } = params
-  const chainSlug = searchParams.chain || 'ethereum'
-  const chain = getChain(chainSlug)
-  const result = await resolveAndScore(address, chainSlug)
+  const isSol = isSolanaAddress(address)
+  const chainSlug = searchParams.chain || (isSol ? 'solana' : 'ethereum')
+  const chain = isSol || chainSlug === 'solana' ? null : getChain(chainSlug)
+  const result = isSol || chainSlug === 'solana'
+    ? await resolveAndScoreSolana(address)
+    : await resolveAndScore(address, chainSlug)
   const displayAddress = result?.ens || address
 
   return (
@@ -197,22 +254,31 @@ export default async function ScorePage({ params, searchParams }: Props) {
 
       {/* Chain selector tabs */}
       <div className="flex flex-wrap gap-2 mb-6">
-        {CHAIN_LIST.map((c) => {
-          const isActive = c.slug === chainSlug
-          return (
-            <Link
-              key={c.slug}
-              href={`/score/${address}?chain=${c.slug}`}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold font-grotesk border transition-all ${
-                isActive
-                  ? 'bg-accent text-background border-accent'
-                  : 'text-muted border-border hover:border-accent/40 hover:text-text'
-              }`}
-            >
-              {c.name}
-            </Link>
-          )
-        })}
+        {isSol ? (
+          <Link
+            href={`/score/${address}?chain=solana`}
+            className="px-3 py-1.5 rounded-lg text-xs font-semibold font-grotesk border transition-all bg-accent text-white border-accent"
+          >
+            Solana
+          </Link>
+        ) : (
+          CHAIN_LIST.map((c) => {
+            const isActive = c.slug === chainSlug
+            return (
+              <Link
+                key={c.slug}
+                href={`/score/${address}?chain=${c.slug}`}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold font-grotesk border transition-all ${
+                  isActive
+                    ? 'bg-accent text-white border-accent'
+                    : 'text-muted border-border hover:border-accent/40 hover:text-text'
+                }`}
+              >
+                {c.name}
+              </Link>
+            )
+          })
+        )}
       </div>
 
       {!result ? (
@@ -227,7 +293,7 @@ export default async function ScorePage({ params, searchParams }: Props) {
           </p>
           <Link
             href="/"
-            className="px-5 py-2.5 rounded-xl bg-accent text-background font-semibold text-sm"
+            className="px-5 py-2.5 rounded-xl bg-accent text-white font-semibold text-sm"
           >
             Try Another Wallet
           </Link>
@@ -244,12 +310,12 @@ export default async function ScorePage({ params, searchParams }: Props) {
               : displayAddress}
           </p>
           <p className="text-muted text-sm mb-6 max-w-sm mx-auto">
-            This wallet has no transaction history on {chain.name}. Start using it to build
+            This wallet has no transaction history on {chain?.name ?? 'Solana'}. Start using it to build
             your on-chain credit profile.
           </p>
           <Link
             href="/"
-            className="px-5 py-2.5 rounded-xl bg-accent text-background font-semibold text-sm"
+            className="px-5 py-2.5 rounded-xl bg-accent text-white font-semibold text-sm"
           >
             Check Another Wallet
           </Link>
@@ -289,7 +355,7 @@ export default async function ScorePage({ params, searchParams }: Props) {
                 <div className="flex flex-wrap gap-4 mt-4 justify-center sm:justify-start">
                   <div>
                     <p className="text-muted text-xs">Network</p>
-                    <p className="text-text text-sm font-medium">{chain.name}</p>
+                    <p className="text-text text-sm font-medium">{chain?.name ?? 'Solana'}</p>
                   </div>
                   <div>
                     <p className="text-muted text-xs">Wallet Age</p>

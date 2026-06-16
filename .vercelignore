@@ -1,0 +1,21 @@
+# Heavy ML training pipeline — never deploy (venv, 35k wallet JSONs, parquets)
+model/
+
+# Local-only ML training data
+ml/data/
+
+# Standard excludes (rebuilt/injected by Vercel)
+node_modules/
+.next/
+.git/
+.vercel/
+
+# Secrets — Vercel injects env from its own dashboard
+.env
+.env.local
+.env.*.local
+
+# misc
+*.log
+.DS_Store
+tsconfig.tsbuildinfo

@@ -21,7 +21,7 @@ export const metadata: Metadata = {
   title: 'ChainScore — On-Chain Credit Score & Loan Marketplace',
   description:
     'Free on-chain credit scoring for Ethereum wallets and a peer-to-peer lending marketplace. 300–850 FICO-style scale. No KYC required.',
-  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'https://chainscore.xyz'),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'https://chainscore.dev'),
   openGraph: {
     title: 'ChainScore — On-Chain Credit Score & Loan Marketplace',
     description: 'Score your wallet, lend or borrow with trust-scored counterparties.',
@@ -40,7 +40,10 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" className={`dark ${spaceGrotesk.variable} ${inter.variable}`}>
+    <html lang="en" suppressHydrationWarning className={`${spaceGrotesk.variable} ${inter.variable}`}>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: `(function(){try{var t=localStorage.getItem('cs-theme');if(t==='dark')document.documentElement.classList.add('dark');}catch(e){}})();` }} />
+      </head>
       <body className="min-h-screen bg-background font-sans text-text antialiased">
         <Providers>
           <Navbar />

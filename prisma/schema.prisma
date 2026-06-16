@@ -9,6 +9,7 @@ datasource db {
 
 model Wallet {
   address          String            @id
+  chain            String            @default("EVM")
   ens              String?
   score            Int
   grade            String
@@ -42,6 +43,7 @@ model LoanListing {
   durationDays       Int
   minBorrowerScore   Int
   collateralRequired Float
+  chain              String            @default("EVM")
   status             ListingStatus     @default(OPEN)
   createdAt          DateTime          @default(now())
   expiresAt          DateTime

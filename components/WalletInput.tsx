@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { isAddress } from 'viem'
 import { CHAIN_LIST } from '@/lib/chains'
+import { isSolanaAddress } from '@/lib/solanaAuth'
 
 export function WalletInput({
   placeholder = 'Enter wallet address or ENS name',
@@ -23,6 +24,13 @@ export function WalletInput({
     if (!trimmed) {
       setError('Please enter a wallet address or ENS name.')
       return false
+    }
+    if (chain === 'solana') {
+      if (!isSolanaAddress(trimmed)) {
+        setError('Invalid Solana address. Please check and try again.')
+        return false
+      }
+      return true
     }
     if (trimmed.endsWith('.eth')) {
       return true
@@ -60,6 +68,7 @@ export function WalletInput({
                 {c.name}
               </option>
             ))}
+            <option value="solana">Solana</option>
           </select>
           <input
             type="text"

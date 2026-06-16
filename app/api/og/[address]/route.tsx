@@ -5,8 +5,8 @@ export const runtime = 'edge'
 
 function gradeColor(grade: string): string {
   switch (grade) {
-    case 'A': return '#00FF94'
-    case 'B': return '#4ADE80'
+    case 'A': return '#0052FF'
+    case 'B': return '#3B82F6'
     case 'C': return '#FFB800'
     case 'D': return '#FF8C00'
     default: return '#FF3B5C'
@@ -14,8 +14,8 @@ function gradeColor(grade: string): string {
 }
 
 function scoreColor(score: number): string {
-  if (score >= 750) return '#00FF94'
-  if (score >= 650) return '#4ADE80'
+  if (score >= 750) return '#0052FF'
+  if (score >= 650) return '#3B82F6'
   if (score >= 550) return '#FFB800'
   if (score >= 450) return '#FF8C00'
   return '#FF3B5C'
@@ -26,7 +26,7 @@ export async function GET(
   { params }: { params: { address: string } }
 ) {
   const { address } = params
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://chainscore.xyz'
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://chainscore.dev'
 
   let score = 300
   let grade = 'F'
@@ -92,13 +92,13 @@ export async function GET(
               width: 40,
               height: 40,
               borderRadius: '10px',
-              background: '#00FF94',
+              background: '#0052FF',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               fontSize: 22,
               fontWeight: 700,
-              color: '#0A0A0F',
+              color: '#ffffff',
             }}
           >
             C
@@ -208,7 +208,7 @@ export async function GET(
             Free Ethereum wallet credit scoring
           </p>
           <p style={{ color: '#5A6478', fontSize: 18, margin: 0 }}>
-            chainscore.xyz
+            chainscore.dev
           </p>
         </div>
       </div>

@@ -16,9 +16,13 @@ out/
 # ML training data (can be large)
 ml/data/
 
+# ML training pipeline — venv, fetched data, parquets, reports (never deploy/commit)
+model/
+
 # misc
 .DS_Store
 *.pem
 npm-debug.log*
+tsconfig.tsbuildinfo
 
 /lib/generated/prisma

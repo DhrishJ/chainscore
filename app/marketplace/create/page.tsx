@@ -9,7 +9,7 @@ import { calculateFee } from '@/lib/fees'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 
-const CURRENCIES = ['USDC', 'USDT', 'DAI', 'ETH']
+const CURRENCIES = ['USDC', 'USDT', 'DAI', 'ETH', 'SOL']
 
 export default function CreateListingPage() {
   const router = useRouter()
@@ -152,7 +152,7 @@ export default function CreateListingPage() {
                   max="50"
                   value={form.minAPR}
                   onChange={(e) => setForm((f) => ({ ...f, minAPR: parseFloat(e.target.value) }))}
-                  className="w-full accent-[#00FF94]"
+                  className="w-full accent-[#0052FF]"
                 />
               </div>
               <div>
@@ -165,7 +165,7 @@ export default function CreateListingPage() {
                   max="100"
                   value={form.maxAPR}
                   onChange={(e) => setForm((f) => ({ ...f, maxAPR: parseFloat(e.target.value) }))}
-                  className="w-full accent-[#00FF94]"
+                  className="w-full accent-[#0052FF]"
                 />
               </div>
             </div>
@@ -183,7 +183,7 @@ export default function CreateListingPage() {
                   onChange={(e) =>
                     setForm((f) => ({ ...f, durationDays: parseInt(e.target.value) }))
                   }
-                  className="w-full accent-[#00FF94]"
+                  className="w-full accent-[#0052FF]"
                 />
               </div>
               <div>
@@ -198,7 +198,7 @@ export default function CreateListingPage() {
                   onChange={(e) =>
                     setForm((f) => ({ ...f, collateralRequired: parseInt(e.target.value) }))
                   }
-                  className="w-full accent-[#00FF94]"
+                  className="w-full accent-[#0052FF]"
                 />
               </div>
             </div>
@@ -215,7 +215,7 @@ export default function CreateListingPage() {
                 onChange={(e) =>
                   setForm((f) => ({ ...f, minBorrowerScore: parseInt(e.target.value) }))
                 }
-                className="w-full accent-[#00FF94]"
+                className="w-full accent-[#0052FF]"
               />
               <div className="flex justify-between text-xs text-muted mt-1">
                 <span>300 (F)</span>

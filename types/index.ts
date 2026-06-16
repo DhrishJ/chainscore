@@ -24,14 +24,20 @@ export interface ScoreResult {
 export interface RawWalletData {
   firstTxTimestamp: number | null
   txCount: number
+  txCount30d: number
+  txCount90d: number
+  txCount180d: number
+  activeDaysCount: number
   activeMonthsLast12: number
+  daysSinceFirstDefi: number
   totalPortfolioUSD: number
   stablecoinPct: number
+  tokenDiversity: number
   hasETH: boolean
   hasENS: boolean
   isGnosisSafe: boolean
-  hasAave: boolean       // detected via aTokens in wallet
-  hasCompound: boolean   // detected via cTokens in wallet
+  hasAave: boolean
+  hasCompound: boolean
   aaveBorrows: number
   aaveRepays: number
   aaveLiquidations: number

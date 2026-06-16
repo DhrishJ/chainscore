@@ -10,7 +10,7 @@ interface RecentScore {
 
 function scoreColor(score: number): string {
   if (score >= 750) return 'text-accent'
-  if (score >= 650) return 'text-green-400'
+  if (score >= 650) return 'text-blue-400'
   if (score >= 550) return 'text-warning'
   if (score >= 450) return 'text-orange-400'
   return 'text-danger'

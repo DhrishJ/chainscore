@@ -36,6 +36,15 @@ interface XGBModel {
   }
 }
 
+interface LRModel {
+  model_type: 'logistic_regression'
+  feature_names: string[]
+  scaler_mean: number[]
+  scaler_scale: number[]
+  coefficients: number[]
+  intercept: number
+}
+
 interface ModelMeta {
   feature_names: string[]
   calibration: {
@@ -52,6 +61,7 @@ interface ModelMeta {
 // ─────────────────────────────────────────────────────────────
 
 let xgbModel: XGBModel | null = null
+let lrModel: LRModel | null = null
 let modelMeta: ModelMeta | null = null
 let modelLoaded = false
 
@@ -68,9 +78,16 @@ function loadModel() {
       return
     }
 
-    xgbModel  = JSON.parse(fs.readFileSync(modelPath, 'utf-8')) as XGBModel
+    const raw = JSON.parse(fs.readFileSync(modelPath, 'utf-8'))
     modelMeta = JSON.parse(fs.readFileSync(metaPath,  'utf-8')) as ModelMeta
-    console.log('[mlScorer] XGBoost model loaded successfully')
+
+    if (raw && raw.model_type === 'logistic_regression') {
+      lrModel = raw as LRModel
+      console.log('[mlScorer] Logistic Regression model loaded successfully')
+    } else {
+      xgbModel = raw as XGBModel
+      console.log('[mlScorer] XGBoost model loaded successfully')
+    }
   } catch (e) {
     console.error('[mlScorer] Failed to load model:', e)
   }
@@ -107,38 +124,88 @@ function xgbPredict(features: number[]): number {
   return sigmoid(margin)
 }
 
+// Logistic Regression inference. Standardize features with the exported scaler,
+// take the linear combination, sigmoid → prob_liquidated, return prob_safe.
+function lrPredict(features: number[]): number {
+  if (!lrModel) return 0.5
+
+  const { coefficients, intercept, scaler_mean, scaler_scale } = lrModel
+  let margin = intercept
+  for (let i = 0; i < coefficients.length; i++) {
+    const scale = scaler_scale[i] || 1
+    const z = (features[i] - scaler_mean[i]) / scale
+    margin += coefficients[i] * z
+  }
+  return 1 - sigmoid(margin) // prob_safe (higher = safer)
+}
+
 // ─────────────────────────────────────────────────────────────
 // Feature vector construction
-// Must match FEATURE_COLS order in train_model.py exactly
+// MUST match FEATURE_COLS order in model/src/build_features.py
+// and model/schema.json exactly (30 features).
+// Add new features at the END only — never reorder.
 // ─────────────────────────────────────────────────────────────
 
 function buildFeatureVector(data: RawWalletData, walletAgeDays: number): number[] {
   const totalBorrows = data.aaveBorrows + data.compoundBorrows
+  const totalRepays  = data.aaveRepays  + data.compoundRepays
+  const repaymentRatio = totalRepays / Math.max(totalBorrows, 1)
+  const priorLiqCount = (data.aaveLiquidations ?? 0) + (data.compoundLiquidations ?? 0)
 
   const protocolsCount = [
-    data.aaveBorrows > 0 || data.hasAave,
-    data.compoundBorrows > 0 || data.hasCompound,
+    data.hasAave || data.aaveBorrows > 0,
+    data.hasCompound || data.compoundBorrows > 0,
     data.hasUniswapLP,
     data.hasStakedETH,
   ].filter(Boolean).length
 
-  // Must match FEATURE_COLS order in train_model.py exactly
+  // Wallet maturity
+  const walletAgeMonths    = walletAgeDays / 30
+  const daysSinceFirstDefi = data.daysSinceFirstDefi ?? 0
+  const activeDaysCount    = data.activeDaysCount ?? 0
+
+  // Activity windows (new fields; fallback to 0 if not yet populated)
+  const txCount30d  = data.txCount30d  ?? 0
+  const txCount90d  = data.txCount90d  ?? 0
+  const txCount180d = data.txCount180d ?? 0
+
   return [
-    walletAgeDays,                   // wallet_age_days
-    Math.floor(walletAgeDays / 30),  // wallet_age_months
-    data.txCount,                    // tx_count
-    data.activeMonthsLast12,         // active_months_12
-    data.aaveBorrows,                // aave_borrows
-    data.compoundBorrows,            // compound_borrows
-    totalBorrows,                    // total_borrows
-    protocolsCount,                  // protocols_used_count
-    data.hasUniswapLP ? 1 : 0,      // has_uniswap_lp
-    data.hasStakedETH ? 1 : 0,      // has_staked_eth
-    data.hasETH ? 1 : 0,            // has_eth
-    data.hasENS ? 1 : 0,            // has_ens
-    data.isGnosisSafe ? 1 : 0,      // is_gnosis_safe
-    data.totalPortfolioUSD,          // total_portfolio_usd
-    data.stablecoinPct,              // stablecoin_pct
+    // Wallet Maturity (4)
+    walletAgeDays,
+    walletAgeMonths,
+    daysSinceFirstDefi,
+    activeDaysCount,
+    // Activity Intensity (5)
+    data.txCount,
+    txCount30d,
+    txCount90d,
+    txCount180d,
+    data.activeMonthsLast12,
+    // Borrowing Track Record (9)
+    data.aaveBorrows,
+    data.aaveRepays,
+    data.aaveLiquidations ?? 0,
+    data.compoundBorrows,
+    data.compoundRepays,
+    data.compoundLiquidations ?? 0,
+    totalBorrows,
+    totalRepays,
+    repaymentRatio,
+    // Risk History (2)
+    priorLiqCount,
+    priorLiqCount > 0 ? 1 : 0,
+    // Protocol Breadth (4)
+    protocolsCount,
+    data.hasUniswapLP ? 1 : 0,
+    data.hasStakedETH ? 1 : 0,
+    data.hasGovernanceVote ? 1 : 0,
+    // Portfolio & Identity (6)
+    data.totalPortfolioUSD,
+    data.stablecoinPct,
+    data.tokenDiversity ?? 0,
+    data.hasETH ? 1 : 0,
+    data.hasENS ? 1 : 0,
+    data.isGnosisSafe ? 1 : 0,
   ]
 }
 
@@ -340,7 +407,11 @@ export function computeScore(data: RawWalletData): ScoreResult {
 
   // ML inference
   let score: number
-  if (xgbModel) {
+  if (lrModel) {
+    const features = buildFeatureVector(data, walletAgeDays)
+    const prob = lrPredict(features)
+    score = calibrateScore(prob)
+  } else if (xgbModel) {
     const features = buildFeatureVector(data, walletAgeDays)
     const prob = xgbPredict(features)
     score = calibrateScore(prob)
