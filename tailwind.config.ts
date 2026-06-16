@@ -15,6 +15,7 @@ const config: Config = {
         card: 'rgb(var(--cs-card) / <alpha-value>)',
         border: 'rgb(var(--cs-border) / <alpha-value>)',
         accent: '#0052FF',
+        success: '#00C879',
         warning: '#FFB800',
         danger: '#FF3B5C',
         text: 'rgb(var(--cs-text) / <alpha-value>)',
@@ -50,6 +51,7 @@ const config: Config = {
       fontFamily: {
         grotesk: ['var(--font-space-grotesk)', 'sans-serif'],
         sans: ['var(--font-inter)', 'sans-serif'],
+        mono: ['var(--font-jetbrains-mono)', 'ui-monospace', 'monospace'],
       },
       borderRadius: {
         lg: 'var(--radius)',

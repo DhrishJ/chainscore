@@ -405,6 +405,29 @@ export function computeScore(data: RawWalletData): ScoreResult {
   const walletAgeDays   = data.firstTxTimestamp ? Math.floor((now - data.firstTxTimestamp) / 86400) : 0
   const walletAgeMonths = Math.floor(walletAgeDays / 30)
 
+  // Borrower-only gate. The model is trained exclusively on wallets that have
+  // borrowed onchain, so a non-borrower has no observable credit outcome and
+  // cannot be scored honestly. Rather than emit a misleading number, return a
+  // dedicated "no borrowing history" state. The score page renders this case
+  // explicitly. This is gated on the lending protocols ChainScore tracks.
+  const totalBorrowsDetected = data.aaveBorrows + data.compoundBorrows
+  if (totalBorrowsDetected === 0) {
+    return {
+      address: '',
+      ens: data.ens,
+      score: 0,
+      grade: 'F',
+      percentile: 0,
+      factors: [],
+      walletAge: walletAgeDays,
+      totalTxns: data.txCount,
+      protocolsUsed: data.protocolsUsed,
+      timestamp: Date.now(),
+      newWallet: false,
+      noBorrowHistory: true,
+    }
+  }
+
   // ML inference
   let score: number
   if (lrModel) {

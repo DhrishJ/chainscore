@@ -121,6 +121,28 @@ export function computeSolanaScore(data: SolanaRawData): ScoreResult {
     }
   }
 
+  // Borrower-only gate: ChainScore scores wallets with onchain borrowing
+  // history. A Solana wallet with no detected borrow events on the lending
+  // protocols we track (Kamino, Solend, Marginfi) gets the honest
+  // "no credit history" state instead of a number.
+  if (data.borrowCount === 0) {
+    const walletAge = Math.floor((Date.now() / 1000 - data.firstTimestamp) / 86400)
+    return {
+      address: '',
+      ens: null,
+      score: 0,
+      grade: 'F',
+      percentile: 0,
+      factors: [],
+      walletAge,
+      totalTxns: data.txCount,
+      protocolsUsed: [],
+      timestamp: Date.now(),
+      newWallet: false,
+      noBorrowHistory: true,
+    }
+  }
+
   const factors = [
     walletHistoryFactor(data),
     portfolioFactor(data),

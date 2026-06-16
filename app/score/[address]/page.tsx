@@ -151,7 +151,9 @@ async function resolveAndScore(input: string, chainSlug: string): Promise<ScoreR
 
   const result = computeScore(rawData)
   result.address = address
-  recentScores.add({ address, score: result.score, timestamp: Date.now() })
+  if (!result.noBorrowHistory && !result.newWallet) {
+    recentScores.add({ address, score: result.score, timestamp: Date.now() })
+  }
   return result
 }
 
@@ -189,7 +191,9 @@ async function resolveAndScoreSolana(address: string): Promise<ScoreResult | nul
   })
 
   result.address = address
-  recentScores.add({ address, score: result.score, timestamp: Date.now() })
+  if (!result.noBorrowHistory && !result.newWallet) {
+    recentScores.add({ address, score: result.score, timestamp: Date.now() })
+  }
   return result
 }
 
@@ -296,6 +300,36 @@ export default async function ScorePage({ params, searchParams }: Props) {
             className="px-5 py-2.5 rounded-xl bg-accent text-white font-semibold text-sm"
           >
             Try Another Wallet
+          </Link>
+        </div>
+      ) : result.noBorrowHistory ? (
+        <div className="rounded-2xl bg-card border border-border p-8 sm:p-10 text-center">
+          <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl border border-border bg-background">
+            <span className="font-mono text-2xl text-muted">?</span>
+          </div>
+          <h1 className="font-grotesk text-2xl font-bold text-text mb-3">
+            No Borrowing History
+          </h1>
+          <p className="text-muted text-xs font-mono mb-5">
+            {displayAddress.length > 20
+              ? `${displayAddress.slice(0, 10)}...${displayAddress.slice(-8)}`
+              : displayAddress}
+          </p>
+          <p className="text-text/80 text-sm leading-relaxed mb-6 max-w-md mx-auto">
+            ChainScore is a credit score for borrowers. It only rates wallets that have an
+            onchain borrowing record, because repayment behavior is what a credit score
+            measures. We did not find any borrowing activity for this wallet on the lending
+            protocols we track ({chain?.name ?? 'Solana'}).
+          </p>
+          <p className="text-muted text-sm leading-relaxed mb-7 max-w-md mx-auto">
+            Borrow and repay on a supported lending protocol to build a credit history, then
+            check back to see your score.
+          </p>
+          <Link
+            href="/"
+            className="inline-block px-5 py-2.5 rounded-xl bg-accent text-white font-semibold text-sm hover:bg-accent/90 transition-colors"
+          >
+            Check Another Wallet
           </Link>
         </div>
       ) : result.newWallet ? (

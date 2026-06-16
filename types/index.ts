@@ -19,6 +19,10 @@ export interface ScoreResult {
   protocolsUsed: string[]
   timestamp: number
   newWallet: boolean
+  // True when the wallet has no detected borrowing history on the lending
+  // protocols ChainScore tracks. ChainScore only scores borrowers, so these
+  // wallets get an honest "no credit history" state instead of a number.
+  noBorrowHistory?: boolean
 }
 
 export interface RawWalletData {

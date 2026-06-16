@@ -8,7 +8,7 @@
   --cs-card: 248 250 252;     /* #F8FAFC */
   --cs-border: 226 232 240;   /* #E2E8F0 */
   --cs-text: 15 23 42;        /* #0F172A */
-  --cs-muted: 100 116 139;    /* #64748B */
+  --cs-muted: 71 85 105;      /* #475569 slate-600 — stronger contrast on white */
 }
 
 /* Dark mode overrides */
@@ -16,8 +16,8 @@
   --cs-bg: 10 10 15;          /* #0A0A0F */
   --cs-card: 13 17 23;        /* #0D1117 */
   --cs-border: 28 35 51;      /* #1C2333 */
-  --cs-text: 232 237 245;     /* #E8EDF5 */
-  --cs-muted: 90 100 120;     /* #5A6478 */
+  --cs-text: 236 240 247;     /* #ECF0F7 */
+  --cs-muted: 148 163 184;    /* #94A3B8 slate-400 — readable on near-black */
 }
 
 * {
@@ -40,6 +40,44 @@ body {
 a {
   color: inherit;
   text-decoration: none;
+}
+
+/* High-tech hero treatments */
+.cs-grid {
+  background-image:
+    linear-gradient(to right, rgb(var(--cs-border) / 0.6) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(var(--cs-border) / 0.6) 1px, transparent 1px);
+  background-size: 64px 64px;
+  -webkit-mask-image: radial-gradient(ellipse 75% 60% at 50% 0%, #000 35%, transparent 78%);
+  mask-image: radial-gradient(ellipse 75% 60% at 50% 0%, #000 35%, transparent 78%);
+}
+
+.cs-glow {
+  background: radial-gradient(circle at 50% 0%, rgb(0 82 255 / 0.18), transparent 60%);
+}
+
+.cs-gradient-text {
+  background: linear-gradient(90deg, #0052FF 0%, #00C879 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+@keyframes cs-draw {
+  from { stroke-dashoffset: 314; }
+}
+
+.cs-arc {
+  animation: cs-draw 1.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes cs-rise {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.cs-rise {
+  animation: cs-rise 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 @layer base {
