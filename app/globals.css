@@ -52,16 +52,13 @@ a {
   mask-image: radial-gradient(ellipse 75% 60% at 50% 0%, #000 35%, transparent 78%);
 }
 
+/* Restrained ambient light. Near-neutral, low opacity: presence, not an "AI glow". */
 .cs-glow {
-  background: radial-gradient(circle at 50% 0%, rgb(0 82 255 / 0.18), transparent 60%);
+  background: radial-gradient(60% 50% at 50% 0%, rgb(0 82 255 / 0.05), transparent 70%);
 }
 
-.cs-gradient-text {
-  background: linear-gradient(90deg, #0052FF 0%, #00C879 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-}
+.text-balance { text-wrap: balance; }
+.text-pretty { text-wrap: pretty; }
 
 @keyframes cs-draw {
   from { stroke-dashoffset: 314; }
@@ -78,6 +75,14 @@ a {
 
 .cs-rise {
   animation: cs-rise 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Reduced motion: reveals enhance an already-visible default, never gate it. */
+@media (prefers-reduced-motion: reduce) {
+  .cs-rise,
+  .cs-arc {
+    animation: none;
+  }
 }
 
 @layer base {
