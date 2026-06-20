@@ -100,7 +100,7 @@ export default function DashboardPage() {
 
   return (
     <main className="min-h-screen px-4 py-8 max-w-6xl mx-auto">
-      <h1 className="font-grotesk text-3xl font-bold text-text mb-6">Dashboard</h1>
+      <h1 className="font-grotesk text-3xl font-bold tracking-[-0.02em] text-text mb-6">Dashboard</h1>
 
       {/* Tabs */}
       <div className="flex gap-1 mb-6 border-b border-border overflow-x-auto">
@@ -124,67 +124,58 @@ export default function DashboardPage() {
       )}
 
       {!loading && tab === 'Overview' && (
-        <div className="space-y-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {score && (
-              <div className="rounded-xl border border-border bg-card p-5 flex items-center gap-4 sm:col-span-2">
-                <div className="w-20 h-20 flex-shrink-0">
-                  <ScoreGauge score={score.score} />
-                </div>
-                <div>
-                  <p className="text-muted text-xs mb-1">Your ChainScore</p>
-                  <div className="flex items-center gap-2">
-                    <span className="font-grotesk text-3xl font-bold text-text">
-                      {score.score}
-                    </span>
-                    <ScoreBadge score={score.score} grade={score.grade} size="sm" />
-                  </div>
-                  <p className="text-xs text-muted mt-1">{score.percentile}th percentile</p>
-                </div>
+        <div className="space-y-8">
+          {score && (
+            <div className="rounded-2xl border border-border bg-card p-5 flex items-center gap-4">
+              <div className="w-20 h-20 flex-shrink-0">
+                <ScoreGauge score={score.score} />
               </div>
-            )}
+              <div>
+                <p className="text-muted text-xs mb-1">Your ChainScore</p>
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-3xl font-bold tabular-nums text-text">
+                    {score.score}
+                  </span>
+                  <ScoreBadge score={score.score} grade={score.grade} size="sm" />
+                </div>
+                <p className="text-xs text-muted mt-1">
+                  <span className="font-mono tabular-nums">{score.percentile}</span>th percentile
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Stats: a slim divided strip, not elevated metric cards (matches landing) */}
+          <dl className="grid grid-cols-2 gap-y-8 sm:grid-cols-4 sm:divide-x sm:divide-border">
             {[
-              {
-                label: 'Total Lent',
-                value: stats?.totalLent ? `$${stats.totalLent.toLocaleString()}` : '—',
-              },
-              {
-                label: 'Total Borrowed',
-                value: stats?.totalBorrowed ? `$${stats.totalBorrowed.toLocaleString()}` : '—',
-              },
-              {
-                label: 'Loans Completed',
-                value: stats?.completedLoans ?? '—',
-              },
-              {
-                label: 'Avg Rating',
-                value:
-                  stats?.avgRating != null ? `${stats.avgRating.toFixed(1)}/5 ⭐` : '—',
-              },
+              { label: 'Total Lent', value: stats?.totalLent ? `$${stats.totalLent.toLocaleString()}` : 'n/a' },
+              { label: 'Total Borrowed', value: stats?.totalBorrowed ? `$${stats.totalBorrowed.toLocaleString()}` : 'n/a' },
+              { label: 'Loans Completed', value: stats?.completedLoans ?? 'n/a' },
+              { label: 'Avg Rating', value: stats?.avgRating != null ? `${stats.avgRating.toFixed(1)}/5` : 'n/a' },
             ].map((stat) => (
-              <div key={stat.label} className="rounded-xl border border-border bg-card p-5">
-                <p className="text-xs text-muted mb-1">{stat.label}</p>
-                <p className="font-grotesk text-2xl font-bold text-text">{stat.value}</p>
+              <div key={stat.label} className="sm:px-8 sm:first:pl-0">
+                <dt className="font-mono text-2xl font-bold tabular-nums text-text sm:text-3xl">{stat.value}</dt>
+                <dd className="mt-1.5 text-sm font-medium text-muted">{stat.label}</dd>
               </div>
             ))}
-          </div>
+          </dl>
 
           <div className="flex flex-wrap gap-3">
             <Link
               href="/marketplace/create"
-              className="rounded-xl bg-accent text-background font-semibold px-5 py-2.5 text-sm hover:bg-accent/90 transition-colors"
+              className="rounded-xl bg-accent text-background font-semibold px-5 py-2.5 text-sm transition-all hover:bg-accent/90 active:translate-y-px"
             >
               Post a Listing
             </Link>
             <Link
               href="/marketplace"
-              className="rounded-xl border border-border text-text font-medium px-5 py-2.5 text-sm hover:border-accent/30 transition-colors"
+              className="rounded-xl border border-border text-text font-medium px-5 py-2.5 text-sm transition-all hover:border-accent/40 active:translate-y-px"
             >
               Browse Loans
             </Link>
             <Link
               href={`/score/${address}`}
-              className="rounded-xl border border-border text-muted font-medium px-5 py-2.5 text-sm hover:border-accent/30 hover:text-text transition-colors"
+              className="rounded-xl border border-border text-muted font-medium px-5 py-2.5 text-sm transition-all hover:border-accent/40 hover:text-text active:translate-y-px"
             >
               View Score Details
             </Link>

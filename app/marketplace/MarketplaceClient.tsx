@@ -192,10 +192,10 @@ export function MarketplaceClient() {
         {/* Sort bar */}
         <div className="flex items-center justify-between mb-4">
           <p className="text-sm text-muted">
-            {total} listing{total !== 1 ? 's' : ''}
+            <span className="font-mono tabular-nums">{total}</span> listing{total !== 1 ? 's' : ''}
             {!isConnected && (
               <span className="ml-2 text-xs">
-                — connect wallet to see your eligible rate
+                · connect wallet to see your eligible rate
               </span>
             )}
           </p>
@@ -258,7 +258,7 @@ export function MarketplaceClient() {
               return (
                 <Link key={listing.id} href={`/marketplace/${listing.id}`}>
                   <div
-                    className={`rounded-xl border bg-card p-5 hover:border-accent/30 transition-colors cursor-pointer ${
+                    className={`rounded-xl border bg-card p-5 transition-all hover:border-accent/40 active:translate-y-px cursor-pointer ${
                       scoreTooLow ? 'opacity-60 border-border' : 'border-border'
                     }`}
                   >
@@ -266,7 +266,7 @@ export function MarketplaceClient() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-3 mb-2 flex-wrap">
                           <span className="font-grotesk font-bold text-xl text-text">
-                            {listing.amount.toLocaleString()} {listing.currency}
+                            <span className="font-mono tabular-nums">{listing.amount.toLocaleString()}</span> {listing.currency}
                           </span>
                           {isSolanaListing && (
                             <span className="inline-flex items-center gap-1 rounded-full border border-[#9945FF]/30 bg-[#9945FF]/10 text-[#9945FF] px-2 py-0.5 text-xs font-medium">
@@ -280,19 +280,19 @@ export function MarketplaceClient() {
                           )}
                         </div>
                         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted">
-                          <span>
-                            {listing.minAPR}–{listing.maxAPR}% APR
+                          <span className="font-mono tabular-nums">
+                            {listing.minAPR} to {listing.maxAPR}% APR
                           </span>
                           <span>·</span>
-                          <span>{listing.durationDays}d</span>
+                          <span className="font-mono tabular-nums">{listing.durationDays}d</span>
                           <span>·</span>
-                          <span>{listing.collateralRequired}% collateral</span>
+                          <span><span className="font-mono tabular-nums">{listing.collateralRequired}</span>% collateral</span>
                           <span>·</span>
-                          <span>Min score {listing.minBorrowerScore}</span>
+                          <span>Min score <span className="font-mono tabular-nums">{listing.minBorrowerScore}</span></span>
                         </div>
                         {offeredAPR != null && !scoreTooLow && (
                           <p className="mt-2 text-xs text-accent">
-                            Your rate: {offeredAPR}% APR
+                            Your rate: <span className="font-mono tabular-nums">{offeredAPR}</span>% APR
                           </p>
                         )}
                       </div>
@@ -320,7 +320,7 @@ export function MarketplaceClient() {
             >
               Previous
             </button>
-            <span className="text-sm text-muted">
+            <span className="font-mono tabular-nums text-sm text-muted">
               {page} / {pages}
             </span>
             <button

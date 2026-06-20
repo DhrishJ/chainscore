@@ -202,7 +202,7 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
   const { address } = params
 
   return {
-    title: `ChainScore — ${address.endsWith('.eth') ? address : address.slice(0, 10) + '...'}`,
+    title: `ChainScore | ${address.endsWith('.eth') ? address : address.slice(0, 10) + '...'}`,
     openGraph: {
       images: [`${appUrl}/api/og/${address}`],
     },
@@ -345,7 +345,7 @@ export default async function ScorePage({ params, searchParams }: Props) {
           </p>
           <p className="text-muted text-sm mb-6 max-w-sm mx-auto">
             This wallet has no transaction history on {chain?.name ?? 'Solana'}. Start using it to build
-            your on-chain credit profile.
+            your onchain credit profile.
           </p>
           <Link
             href="/"

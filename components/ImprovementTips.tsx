@@ -4,17 +4,16 @@ interface ImprovementTipsProps {
   factors: Factor[]
 }
 
+// Keyed to the model factor families (see mlScorer.ts factor_groups).
 const tipsByFactor: Record<string, string> = {
-  'Wallet Age':
-    'Keep using your wallet consistently over time. Age is the single most reliable signal of a trustworthy on-chain history — you cannot shortcut this.',
-  'Transaction Volume':
-    'Make regular, meaningful transactions. Aim to be active in at least 8 months per year. Consistency matters more than volume.',
-  'DeFi Protocol Breadth':
-    'Explore DeFi: supply liquidity on Uniswap, stake ETH via Lido, or earn yield on Aave. Each new protocol you use adds breadth to your profile.',
-  'Repayment Behavior':
-    'If you use lending protocols, repay loans promptly and avoid liquidations. A 100% repayment rate with zero liquidations is the highest-scoring outcome.',
-  'Portfolio Stability':
-    'Register an ENS name, hold ETH long-term, and consider using a Gnosis Safe multisig. Stablecoins above 10% of your portfolio also signal stability.',
+  'Lending History':
+    'Borrow and repay on Aave or Compound, repay promptly, and avoid liquidations. A full repayment record with zero liquidations is the highest scoring outcome.',
+  'Wallet History':
+    'Keep using your wallet consistently over time. Aim to stay active across at least 8 months a year. Age and steady activity are signals you cannot shortcut.',
+  'DeFi Activity':
+    'Use more of DeFi: supply liquidity on Uniswap, stake ETH, or earn yield onchain. Each new protocol you use adds breadth to your profile.',
+  'Portfolio & Identity':
+    'Register an ENS name, hold ETH, and consider a Gnosis Safe multisig. A stablecoin allocation above 10 percent of your portfolio also signals stability.',
 }
 
 export function ImprovementTips({ factors }: ImprovementTipsProps) {
@@ -30,7 +29,7 @@ export function ImprovementTips({ factors }: ImprovementTipsProps) {
       <div className="flex flex-col gap-4">
         {weakest.map((factor, i) => (
           <div key={factor.name} className="flex gap-3">
-            <div className="flex-shrink-0 w-6 h-6 rounded-full bg-accent/10 text-accent border border-accent/30 flex items-center justify-center text-xs font-bold">
+            <div className="flex-shrink-0 w-6 h-6 rounded-full bg-accent/10 text-accent border border-accent/30 flex items-center justify-center font-mono text-xs font-bold tabular-nums">
               {i + 1}
             </div>
             <div>

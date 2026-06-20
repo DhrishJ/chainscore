@@ -47,11 +47,13 @@ export default async function ProfilePage({
             <div className="w-32 h-32 mx-auto mb-4">
               <ScoreGauge score={score.score} />
             </div>
-            <h1 className="font-grotesk font-bold text-xl text-text">{displayName}</h1>
+            <h1 className="font-grotesk font-bold text-xl tracking-[-0.02em] text-text">{displayName}</h1>
             <div className="mt-2 flex justify-center">
               <ScoreBadge score={score.score} grade={score.grade} size="lg" />
             </div>
-            <p className="text-muted text-sm mt-2">{score.percentile}th percentile</p>
+            <p className="text-muted text-sm mt-2">
+              <span className="font-mono tabular-nums">{score.percentile}</span>th percentile
+            </p>
             <Link
               href={`/score/${params.address}`}
               className="mt-3 inline-block text-accent text-xs hover:underline"
@@ -65,28 +67,28 @@ export default async function ProfilePage({
               <h2 className="font-grotesk font-semibold text-sm text-text">
                 Marketplace Reputation
               </h2>
-              <div className="space-y-2 text-sm">
+              <dl className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-muted">Loans as Lender</span>
-                  <span className="text-text">{stats.completedLoansAsLender}</span>
+                  <span className="font-mono tabular-nums text-text">{stats.completedLoansAsLender}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted">Loans as Borrower</span>
-                  <span className="text-text">{stats.completedLoansAsBorrower}</span>
+                  <span className="font-mono tabular-nums text-text">{stats.completedLoansAsBorrower}</span>
                 </div>
                 {stats.avgRating != null && (
                   <div className="flex justify-between">
                     <span className="text-muted">Avg Rating</span>
-                    <span className="text-accent">
-                      {stats.avgRating.toFixed(1)}/5 ⭐
+                    <span className="font-mono tabular-nums text-accent">
+                      {stats.avgRating.toFixed(1)}/5
                     </span>
                   </div>
                 )}
                 <div className="flex justify-between">
                   <span className="text-muted">Reviews</span>
-                  <span className="text-text">{stats.reviewCount}</span>
+                  <span className="font-mono tabular-nums text-text">{stats.reviewCount}</span>
                 </div>
-              </div>
+              </dl>
             </div>
           )}
         </div>
@@ -102,7 +104,7 @@ export default async function ProfilePage({
                   <div key={f.name}>
                     <div className="flex justify-between text-sm mb-1.5">
                       <span className="text-text">{f.name}</span>
-                      <span className="text-muted">
+                      <span className="font-mono tabular-nums text-muted">
                         {f.rawScore}/100 × {Math.round(f.weight * 100)}%
                       </span>
                     </div>
@@ -136,14 +138,14 @@ export default async function ProfilePage({
                   <Link
                     key={l.id}
                     href={`/marketplace/${l.id}`}
-                    className="block rounded-lg border border-border bg-background p-3 hover:border-accent/30 transition-colors"
+                    className="block rounded-lg border border-border bg-background p-3 transition-all hover:border-accent/40 active:translate-y-px"
                   >
                     <div className="flex justify-between text-sm">
                       <span className="font-medium text-text">
-                        {l.amount.toLocaleString()} {l.currency}
+                        <span className="font-mono tabular-nums">{l.amount.toLocaleString()}</span> {l.currency}
                       </span>
-                      <span className="text-muted">
-                        {l.minAPR}–{l.maxAPR}% APR · {l.durationDays}d
+                      <span className="font-mono tabular-nums text-muted">
+                        {l.minAPR} to {l.maxAPR}% APR · {l.durationDays}d
                       </span>
                     </div>
                   </Link>
@@ -180,9 +182,9 @@ export default async function ProfilePage({
                       </span>
                     </div>
                     {r.comment && (
-                      <p className="text-sm text-text">{r.comment}</p>
+                      <p className="text-pretty text-sm text-text">{r.comment}</p>
                     )}
-                    <p className="text-xs text-muted mt-1">
+                    <p className="font-mono tabular-nums text-xs text-muted mt-1">
                       {new Date(r.createdAt).toLocaleDateString()}
                     </p>
                   </div>

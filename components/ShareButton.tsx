@@ -12,7 +12,7 @@ export function ShareButton({ address, score, grade }: ShareButtonProps) {
 
   function handleShare() {
     const text = encodeURIComponent(
-      `My on-chain credit score is ${score} (Grade: ${grade}) 🔗\nCheck yours at ${scoreUrl}`
+      `My onchain credit score is ${score} (Grade: ${grade}) 🔗\nCheck yours at ${scoreUrl}`
     )
     window.open(
       `https://twitter.com/intent/tweet?text=${text}`,

@@ -1,9 +1,19 @@
 /**
- * ChainScore — ML-based wallet scorer
- * Replaces the hand-crafted formula in scorer.ts with XGBoost inference.
+ * ChainScore — unified ML wallet scorer (Phase 7).
  *
- * Model is loaded once at module init from ml/model.json (server-side only).
- * Falls back to the formula scorer if the model file is not found.
+ * One scoring call produces BOTH the headline score and the on-page factor bars
+ * from a single model prediction, so they agree by construction. There is no
+ * second, parallel heuristic score anymore.
+ *
+ * Pipeline per wallet:
+ *   features  -> model margin + per-feature contributions  (one pass)
+ *   margin    -> raw P(liquidation) via sigmoid
+ *   raw P     -> calibrated default probability (PD) via the exported lookup
+ *   PD        -> 300..850 score via the points-to-double-odds band
+ *   contribs  -> grouped into the 4 factor families -> the bars the UI renders
+ *
+ * The model (XGBoost booster JSON, or a logistic regression fallback) and all
+ * mapping parameters load once from ml/model.json + ml/model_meta.json.
  */
 
 import fs from 'fs'
@@ -11,7 +21,7 @@ import path from 'path'
 import type { Factor, ScoreResult, RawWalletData } from '@/types'
 
 // ─────────────────────────────────────────────────────────────
-// XGBoost JSON types
+// Model artifact types
 // ─────────────────────────────────────────────────────────────
 
 interface XGBTree {
@@ -24,16 +34,8 @@ interface XGBTree {
 }
 
 interface XGBModel {
-  learner: {
-    gradient_booster: {
-      model: {
-        trees: XGBTree[]
-      }
-    }
-    learner_model_param: {
-      base_score: string
-    }
-  }
+  learner: { gradient_booster: { model: { trees: XGBTree[] } } }
+  chainscore_model_type?: string
 }
 
 interface LRModel {
@@ -46,112 +48,183 @@ interface LRModel {
 }
 
 interface ModelMeta {
+  model_version: string
+  model_type: 'xgboost' | 'logistic_regression'
   feature_names: string[]
-  calibration: {
-    p10: number; score_at_p10: number
-    p50: number; score_at_p50: number
-    p90: number; score_at_p90: number
-    score_min: number
-    score_max: number
-  }
+  factor_groups: Record<string, string[]>
+  factor_scales: Record<string, number>
+  base_score: number
+  calibration: { x: number[]; y: number[] }
+  score_band: { offset: number; factor: number; score_min: number; score_max: number }
+  grade_cutoffs: { A: number; B: number; C: number; D: number }
+  score_distribution: Record<string, number>
 }
 
 // ─────────────────────────────────────────────────────────────
-// Model loading (once at startup)
+// Loading (once)
 // ─────────────────────────────────────────────────────────────
 
 let xgbModel: XGBModel | null = null
 let lrModel: LRModel | null = null
-let modelMeta: ModelMeta | null = null
+let meta: ModelMeta | null = null
 let modelLoaded = false
 
 function loadModel() {
   if (modelLoaded) return
   modelLoaded = true
-
   try {
     const modelPath = path.join(process.cwd(), 'ml', 'model.json')
-    const metaPath  = path.join(process.cwd(), 'ml', 'model_meta.json')
-
+    const metaPath = path.join(process.cwd(), 'ml', 'model_meta.json')
     if (!fs.existsSync(modelPath) || !fs.existsSync(metaPath)) {
-      console.warn('[mlScorer] model.json or model_meta.json not found — falling back to formula scorer')
+      console.warn('[mlScorer] model artifacts not found — falling back to heuristic scorer')
       return
     }
-
     const raw = JSON.parse(fs.readFileSync(modelPath, 'utf-8'))
-    modelMeta = JSON.parse(fs.readFileSync(metaPath,  'utf-8')) as ModelMeta
-
+    meta = JSON.parse(fs.readFileSync(metaPath, 'utf-8')) as ModelMeta
     if (raw && raw.model_type === 'logistic_regression') {
       lrModel = raw as LRModel
-      console.log('[mlScorer] Logistic Regression model loaded successfully')
+      console.log('[mlScorer] logistic regression model loaded')
     } else {
       xgbModel = raw as XGBModel
-      console.log('[mlScorer] XGBoost model loaded successfully')
+      console.log('[mlScorer] XGBoost model loaded')
     }
   } catch (e) {
-    console.error('[mlScorer] Failed to load model:', e)
+    console.error('[mlScorer] failed to load model:', e)
   }
 }
-
-// ─────────────────────────────────────────────────────────────
-// XGBoost inference
-// ─────────────────────────────────────────────────────────────
 
 function sigmoid(x: number): number {
   return 1 / (1 + Math.exp(-x))
 }
 
-function predictTree(tree: XGBTree, features: number[]): number {
-  let node = 0
-  while (tree.left_children[node] !== -1) {
-    const featureVal = features[tree.split_indices[node]]
-    const goLeft = (featureVal === undefined || isNaN(featureVal))
-      ? tree.default_left[node] === 1
-      : featureVal < tree.split_conditions[node]
-    node = goLeft ? tree.left_children[node] : tree.right_children[node]
-  }
-  return tree.base_weights[node]
+// ─────────────────────────────────────────────────────────────
+// One prediction pass: margin + per-feature contributions
+// contributions sum (+ bias) to the margin, so grouping them into families and
+// summing them back always reconstructs the headline. Same numbers, one source.
+// ─────────────────────────────────────────────────────────────
+
+interface Prediction {
+  marginLiq: number          // logit of P(liquidation)
+  contribs: number[]         // per-feature contribution to marginLiq
 }
 
-function xgbPredict(features: number[]): number {
-  if (!xgbModel) return 0.5
+function predictXGB(features: number[]): Prediction {
+  const trees = xgbModel!.learner.gradient_booster.model.trees
+  const contribs = new Array(features.length).fill(0)
+  // base_score is a probability; its logit is the model's starting margin.
+  const bs = meta?.base_score ?? 0.5
+  let margin = Math.log(bs / (1 - bs))
 
-  const trees = xgbModel.learner.gradient_booster.model.trees
-  let margin = 0
   for (const tree of trees) {
-    margin += predictTree(tree, features)
+    let node = 0
+    margin += tree.base_weights[0] // each tree contributes its root value as bias
+    while (tree.left_children[node] !== -1) {
+      const fIdx = tree.split_indices[node]
+      const fVal = features[fIdx]
+      const goLeft =
+        fVal === undefined || isNaN(fVal)
+          ? tree.default_left[node] === 1
+          : fVal < tree.split_conditions[node]
+      const child = goLeft ? tree.left_children[node] : tree.right_children[node]
+      // Credit the change in node value along the path to the splitting feature.
+      contribs[fIdx] += tree.base_weights[child] - tree.base_weights[node]
+      margin += tree.base_weights[child] - tree.base_weights[node]
+      node = child
+    }
   }
-  return sigmoid(margin)
+  return { marginLiq: margin, contribs }
 }
 
-// Logistic Regression inference. Standardize features with the exported scaler,
-// take the linear combination, sigmoid → prob_liquidated, return prob_safe.
-function lrPredict(features: number[]): number {
-  if (!lrModel) return 0.5
-
-  const { coefficients, intercept, scaler_mean, scaler_scale } = lrModel
+function predictLR(features: number[]): Prediction {
+  const { coefficients, intercept, scaler_mean, scaler_scale } = lrModel!
+  const contribs = new Array(features.length).fill(0)
   let margin = intercept
   for (let i = 0; i < coefficients.length; i++) {
     const scale = scaler_scale[i] || 1
     const z = (features[i] - scaler_mean[i]) / scale
-    margin += coefficients[i] * z
+    contribs[i] = coefficients[i] * z
+    margin += contribs[i]
   }
-  return 1 - sigmoid(margin) // prob_safe (higher = safer)
+  return { marginLiq: margin, contribs }
 }
 
 // ─────────────────────────────────────────────────────────────
-// Feature vector construction
-// MUST match FEATURE_COLS order in model/src/build_features.py
-// and model/schema.json exactly (30 features).
-// Add new features at the END only — never reorder.
+// Calibration + score band + grade + percentile
+// ─────────────────────────────────────────────────────────────
+
+function interp(x: number[], y: number[], q: number): number {
+  if (q <= x[0]) return y[0]
+  if (q >= x[x.length - 1]) return y[y.length - 1]
+  let lo = 0
+  let hi = x.length - 1
+  while (hi - lo > 1) {
+    const mid = (lo + hi) >> 1
+    if (x[mid] <= q) lo = mid
+    else hi = mid
+  }
+  const t = (q - x[lo]) / (x[hi] - x[lo] || 1)
+  return y[lo] + t * (y[hi] - y[lo])
+}
+
+function calibratePD(rawProbLiq: number): number {
+  if (!meta?.calibration) return rawProbLiq
+  return interp(meta.calibration.x, meta.calibration.y, rawProbLiq)
+}
+
+function pdToScore(pd: number): number {
+  const band = meta!.score_band
+  const p = Math.min(Math.max(pd, 1e-4), 1 - 1e-4)
+  const s = band.offset - band.factor * Math.log(p / (1 - p))
+  return Math.round(Math.min(band.score_max, Math.max(band.score_min, s)))
+}
+
+function scoreToGrade(score: number): 'A' | 'B' | 'C' | 'D' | 'F' {
+  const g = meta?.grade_cutoffs
+  if (!g) {
+    if (score >= 750) return 'A'
+    if (score >= 650) return 'B'
+    if (score >= 550) return 'C'
+    if (score >= 450) return 'D'
+    return 'F'
+  }
+  if (score >= g.A) return 'A'
+  if (score >= g.B) return 'B'
+  if (score >= g.C) return 'C'
+  if (score >= g.D) return 'D'
+  return 'F'
+}
+
+function scoreToPercentile(score: number): number {
+  const dist = meta?.score_distribution
+  if (!dist) return 50
+  // Build (score, percentile) anchors from the exported deciles + range ends.
+  const pts: [number, number][] = [[meta!.score_band.score_min, 0]]
+  for (const q of [10, 20, 30, 40, 50, 60, 70, 80, 90]) {
+    const s = dist[`p${q}`]
+    if (typeof s === 'number') pts.push([s, q])
+  }
+  pts.push([meta!.score_band.score_max, 100])
+  pts.sort((a, b) => a[0] - b[0])
+  for (let i = 1; i < pts.length; i++) {
+    if (score <= pts[i][0]) {
+      const [s0, p0] = pts[i - 1]
+      const [s1, p1] = pts[i]
+      const t = (score - s0) / (s1 - s0 || 1)
+      return Math.round(Math.min(100, Math.max(1, p0 + t * (p1 - p0))))
+    }
+  }
+  return 99
+}
+
+// ─────────────────────────────────────────────────────────────
+// Feature vector — MUST match model/schema.json order (30 features)
 // ─────────────────────────────────────────────────────────────
 
 function buildFeatureVector(data: RawWalletData, walletAgeDays: number): number[] {
   const totalBorrows = data.aaveBorrows + data.compoundBorrows
-  const totalRepays  = data.aaveRepays  + data.compoundRepays
+  const totalRepays = data.aaveRepays + data.compoundRepays
   const repaymentRatio = totalRepays / Math.max(totalBorrows, 1)
   const priorLiqCount = (data.aaveLiquidations ?? 0) + (data.compoundLiquidations ?? 0)
-
   const protocolsCount = [
     data.hasAave || data.aaveBorrows > 0,
     data.hasCompound || data.compoundBorrows > 0,
@@ -159,29 +232,16 @@ function buildFeatureVector(data: RawWalletData, walletAgeDays: number): number[
     data.hasStakedETH,
   ].filter(Boolean).length
 
-  // Wallet maturity
-  const walletAgeMonths    = walletAgeDays / 30
-  const daysSinceFirstDefi = data.daysSinceFirstDefi ?? 0
-  const activeDaysCount    = data.activeDaysCount ?? 0
-
-  // Activity windows (new fields; fallback to 0 if not yet populated)
-  const txCount30d  = data.txCount30d  ?? 0
-  const txCount90d  = data.txCount90d  ?? 0
-  const txCount180d = data.txCount180d ?? 0
-
   return [
-    // Wallet Maturity (4)
     walletAgeDays,
-    walletAgeMonths,
-    daysSinceFirstDefi,
-    activeDaysCount,
-    // Activity Intensity (5)
+    walletAgeDays / 30,
+    data.daysSinceFirstDefi ?? 0,
+    data.activeDaysCount ?? 0,
     data.txCount,
-    txCount30d,
-    txCount90d,
-    txCount180d,
+    data.txCount30d ?? 0,
+    data.txCount90d ?? 0,
+    data.txCount180d ?? 0,
     data.activeMonthsLast12,
-    // Borrowing Track Record (9)
     data.aaveBorrows,
     data.aaveRepays,
     data.aaveLiquidations ?? 0,
@@ -191,15 +251,12 @@ function buildFeatureVector(data: RawWalletData, walletAgeDays: number): number[
     totalBorrows,
     totalRepays,
     repaymentRatio,
-    // Risk History (2)
     priorLiqCount,
     priorLiqCount > 0 ? 1 : 0,
-    // Protocol Breadth (4)
     protocolsCount,
     data.hasUniswapLP ? 1 : 0,
     data.hasStakedETH ? 1 : 0,
     data.hasGovernanceVote ? 1 : 0,
-    // Portfolio & Identity (6)
     data.totalPortfolioUSD,
     data.stablecoinPct,
     data.tokenDiversity ?? 0,
@@ -210,254 +267,139 @@ function buildFeatureVector(data: RawWalletData, walletAgeDays: number): number[
 }
 
 // ─────────────────────────────────────────────────────────────
-// Score calibration: probability → 300–850
-// Piecewise linear through 3 anchor points from training
+// Factor bars from the SAME prediction (model attributions)
+// Each family's bar is the model's grouped contribution, normalized to 0..100.
+// Higher bar = the family pushes the wallet toward "safe".
 // ─────────────────────────────────────────────────────────────
 
-function calibrateScore(prob: number): number {
-  if (!modelMeta) return Math.round(300 + prob * 550)
-
-  const { p10, score_at_p10, p50, score_at_p50, p90, score_at_p90, score_min, score_max } = modelMeta.calibration
-
-  let score: number
-  if (prob <= p10) {
-    score = score_min + (prob / p10) * (score_at_p10 - score_min)
-  } else if (prob <= p50) {
-    const t = (prob - p10) / (p50 - p10)
-    score = score_at_p10 + t * (score_at_p50 - score_at_p10)
-  } else if (prob <= p90) {
-    const t = (prob - p50) / (p90 - p50)
-    score = score_at_p50 + t * (score_at_p90 - score_at_p50)
-  } else {
-    const t = (prob - p90) / (1 - p90)
-    score = score_at_p90 + t * (score_max - score_at_p90)
-  }
-
-  return Math.round(Math.min(score_max, Math.max(score_min, score)))
+const FAMILY_WEIGHTS: Record<string, number> = {
+  'Lending History': 0.3,
+  'Wallet History': 0.25,
+  'DeFi Activity': 0.23,
+  'Portfolio & Identity': 0.22,
 }
 
-// ─────────────────────────────────────────────────────────────
-// Factor signals — 4 groups derived from ML feature importances
-//
-// Weights reflect actual XGBoost gain importances (grouped):
-//   Lending History:  30%  (compound_borrows 17%, aave_borrows 6%, total_borrows 7%)
-//   Wallet History:   25%  (wallet_age 13%, tx_count 6%, active_months 5%)
-//   DeFi Activity:    23%  (protocols 9%, staked_eth 9%, uniswap_lp 6%)
-//   Portfolio:        22%  (has_eth 7%, gnosis_safe 6%, portfolio_usd 5%, stablecoin 3%)
-// ─────────────────────────────────────────────────────────────
-
-function buildFactors(data: RawWalletData, walletAgeDays: number, walletAgeMonths: number): Factor[] {
+function familyExplanation(name: string, data: RawWalletData, rawScore: number): string {
   const totalBorrows = data.aaveBorrows + data.compoundBorrows
-  const hasLendingError = Boolean(data.errors?.aave || data.errors?.compound)
-
-  // ── Lending History (30%) ──────────────────────────────────
-  // Compound borrowing is the strongest single signal (17% importance)
-  let f1Raw = 20 // baseline: no history
-  if (totalBorrows > 0) {
-    if (data.compoundBorrows > 0) f1Raw += 40
-    if (data.aaveBorrows > 0)     f1Raw += 25
-    const borrowBonus = Math.min(15, Math.floor(totalBorrows / 5) * 3)
-    f1Raw = Math.min(100, f1Raw + borrowBonus)
-  }
-
-  const f1Explanation = hasLendingError
-    ? 'Unable to fully query lending history. Score estimated from available data.'
-    : totalBorrows === 0
-    ? 'No on-chain borrowing detected. Using Aave or Compound builds a verifiable credit history.'
-    : data.compoundBorrows > 0 && data.aaveBorrows > 0
-    ? `Active on both Compound (${data.compoundBorrows} loans) and Aave (${data.aaveBorrows} loans) — strong multi-protocol lending history.`
-    : data.compoundBorrows > 0
-    ? `${data.compoundBorrows} Compound loan(s) detected. Adding Aave activity would further strengthen this signal.`
-    : `${data.aaveBorrows} Aave loan(s) detected. Adding Compound activity would further strengthen this signal.`
-
-  // ── Wallet History (25%) ───────────────────────────────────
-  let f2Raw = walletAgeMonths < 6 ? 10 : walletAgeMonths < 12 ? 25 : walletAgeMonths < 24 ? 45 : walletAgeMonths < 36 ? 65 : walletAgeMonths < 48 ? 80 : 90
-  const txBonus = data.txCount < 10 ? 0 : data.txCount < 50 ? 3 : data.txCount < 200 ? 6 : data.txCount < 500 ? 8 : 10
-  if (data.activeMonthsLast12 >= 8) f2Raw += 5
-  f2Raw = Math.min(100, f2Raw + txBonus)
-
-  const f2Explanation = walletAgeMonths < 6
-    ? `Wallet is ${walletAgeMonths} months old with ${data.txCount} transactions. Older, more active wallets score higher.`
-    : data.activeMonthsLast12 >= 8
-    ? `${walletAgeMonths}-month-old wallet with ${data.txCount} transactions active across ${data.activeMonthsLast12} of the last 12 months — consistent usage.`
-    : `${walletAgeMonths}-month-old wallet, ${data.txCount} transactions. Try to stay active for at least 8 months per year.`
-
-  // ── DeFi Activity (23%) ────────────────────────────────────
-  const protocols = data.protocolsUsed.length
-  let f3Raw = protocols === 0 ? 0 : protocols === 1 ? 30 : protocols === 2 ? 55 : protocols === 3 ? 75 : 90
-  if (data.hasStakedETH) f3Raw = Math.min(100, f3Raw + 10)
-  if (data.hasUniswapLP)  f3Raw = Math.min(100, f3Raw + 8)
-  if (data.hasGovernanceVote) f3Raw = Math.min(100, f3Raw + 5)
-
-  const f3Explanation = protocols === 0
-    ? 'No DeFi protocol usage detected. Staking ETH, providing liquidity, or borrowing on lending protocols all strengthen this signal.'
-    : `Active on ${protocols} protocol(s): ${data.protocolsUsed.join(', ')}.${data.hasStakedETH ? ' ETH staking detected.' : ''}${data.hasUniswapLP ? ' Uniswap LP position detected.' : ''}`
-
-  // ── Portfolio & Identity (22%) ─────────────────────────────
-  let f4Raw = 0
-  if (data.hasETH)                          f4Raw += 30
-  if (data.isGnosisSafe)                    f4Raw += 25
-  if (data.totalPortfolioUSD > 10000)       f4Raw += 20
-  else if (data.totalPortfolioUSD > 1000)   f4Raw += 12
-  else if (data.totalPortfolioUSD > 100)    f4Raw += 5
-  if (data.stablecoinPct > 10)              f4Raw += 12
-  if (data.hasENS)                          f4Raw += 13
-  f4Raw = Math.min(100, f4Raw)
-
-  const f4Explanation = [
-    data.isGnosisSafe ? 'Gnosis Safe multisig — highest trust signal.' : '',
-    data.hasENS ? 'ENS name registered.' : '',
-    data.hasETH ? 'ETH holdings detected.' : '',
-    data.totalPortfolioUSD > 1000 ? `Portfolio value $${Math.round(data.totalPortfolioUSD).toLocaleString()}.` : '',
-    data.stablecoinPct > 10 ? `${Math.round(data.stablecoinPct)}% stablecoin allocation.` : '',
-  ].filter(Boolean).join(' ') || 'No strong portfolio signals. Holding ETH, registering an ENS name, or using a Gnosis Safe multisig all improve this.'
-
-  return [
-    {
-      name: 'Lending History',
-      rawScore: f1Raw,
-      weight: 0.30,
-      weightedScore: f1Raw * 0.30,
-      explanation: f1Explanation,
-      limitedData: hasLendingError,
-    },
-    {
-      name: 'Wallet History',
-      rawScore: f2Raw,
-      weight: 0.25,
-      weightedScore: f2Raw * 0.25,
-      explanation: f2Explanation,
-      limitedData: Boolean(data.errors?.etherscan),
-    },
-    {
-      name: 'DeFi Activity',
-      rawScore: f3Raw,
-      weight: 0.23,
-      weightedScore: f3Raw * 0.23,
-      explanation: f3Explanation,
-      limitedData: Boolean(data.errors?.uniswap),
-    },
-    {
-      name: 'Portfolio & Identity',
-      rawScore: f4Raw,
-      weight: 0.22,
-      weightedScore: f4Raw * 0.22,
-      explanation: f4Explanation,
-      limitedData: Boolean(data.errors?.alchemy),
-    },
-  ]
-}
-
-// ─────────────────────────────────────────────────────────────
-// Grade + percentile helpers
-// ─────────────────────────────────────────────────────────────
-
-function scoreToGrade(score: number): 'A' | 'B' | 'C' | 'D' | 'F' {
-  if (score >= 750) return 'A'
-  if (score >= 650) return 'B'
-  if (score >= 550) return 'C'
-  if (score >= 450) return 'D'
-  return 'F'
-}
-
-function scoreToPercentile(score: number): number {
-  const table: [number, number][] = [
-    [300, 1], [350, 3], [400, 8], [450, 15], [500, 25],
-    [550, 38], [580, 50], [600, 57], [650, 68], [700, 79],
-    [750, 88], [800, 94], [850, 99],
-  ]
-  for (let i = 1; i < table.length; i++) {
-    const [s0, p0] = table[i - 1]
-    const [s1, p1] = table[i]
-    if (score <= s1) {
-      const t = (score - s0) / (s1 - s0)
-      return Math.round(p0 + t * (p1 - p0))
+  switch (name) {
+    case 'Lending History':
+      if (totalBorrows === 0)
+        return 'No onchain borrowing detected. Using Aave or Compound builds a verifiable credit history.'
+      if (data.compoundBorrows > 0 && data.aaveBorrows > 0)
+        return `Active on both Compound (${data.compoundBorrows} loans) and Aave (${data.aaveBorrows} loans). Repayment track record drives this signal.`
+      if (data.compoundBorrows > 0)
+        return `${data.compoundBorrows} Compound loan(s) detected. Consistent repayment strengthens this further.`
+      return `${data.aaveBorrows} Aave loan(s) detected. Consistent repayment strengthens this further.`
+    case 'Wallet History': {
+      const months = Math.floor((data.daysSinceFirstDefi ?? 0) / 30)
+      return `${data.txCount} transactions, active across ${data.activeMonthsLast12} of the last 12 months. Older, steadily active wallets score higher.`
     }
+    case 'DeFi Activity': {
+      const n = data.protocolsUsed.length
+      if (n === 0)
+        return 'Limited DeFi breadth. Staking ETH, providing liquidity, or using more protocols strengthens this signal.'
+      return `Active across ${n} protocol(s): ${data.protocolsUsed.join(', ')}.${data.hasStakedETH ? ' ETH staking detected.' : ''}${data.hasUniswapLP ? ' Uniswap LP detected.' : ''}`
+    }
+    default:
+      return [
+        data.isGnosisSafe ? 'Gnosis Safe multisig detected.' : '',
+        data.hasENS ? 'ENS name registered.' : '',
+        data.hasETH ? 'ETH holdings detected.' : '',
+        data.totalPortfolioUSD > 1000 ? `Portfolio value $${Math.round(data.totalPortfolioUSD).toLocaleString()}.` : '',
+        data.stablecoinPct > 10 ? `${Math.round(data.stablecoinPct)}% stablecoin allocation.` : '',
+      ]
+        .filter(Boolean)
+        .join(' ') || 'Holding ETH, registering an ENS name, or using a Gnosis Safe multisig improve this signal.'
   }
-  return 99
+}
+
+function buildModelFactors(data: RawWalletData, contribs: number[]): Factor[] {
+  const groups = meta!.factor_groups
+  const scales = meta!.factor_scales
+  const names = meta!.feature_names
+  const idx: Record<string, number> = {}
+  names.forEach((n, i) => (idx[n] = i))
+
+  const errorByFamily: Record<string, boolean> = {
+    'Lending History': Boolean(data.errors?.aave || data.errors?.compound),
+    'Wallet History': Boolean(data.errors?.etherscan),
+    'DeFi Activity': Boolean(data.errors?.uniswap),
+    'Portfolio & Identity': Boolean(data.errors?.alchemy),
+  }
+
+  return Object.keys(groups).map((name) => {
+    const sumContrib = groups[name].reduce((acc, f) => acc + (contribs[idx[f]] ?? 0), 0)
+    const scale = scales[name] || 1
+    // Positive contribution raises liquidation risk; invert so higher bar = safer.
+    const rawScore = Math.round(100 * sigmoid(-sumContrib / scale))
+    const weight = FAMILY_WEIGHTS[name] ?? 0.25
+    return {
+      name,
+      rawScore: Math.min(100, Math.max(0, rawScore)),
+      weight,
+      weightedScore: Math.min(100, Math.max(0, rawScore)) * weight,
+      explanation: familyExplanation(name, data, rawScore),
+      limitedData: errorByFamily[name] ?? false,
+    }
+  })
 }
 
 // ─────────────────────────────────────────────────────────────
-// Main export — drop-in replacement for computeScore()
+// Main export
 // ─────────────────────────────────────────────────────────────
 
 export function computeScore(data: RawWalletData): ScoreResult {
   loadModel()
 
-  // New wallet — no on-chain history
+  // New wallet — no onchain history at all.
   if (data.txCount === 0 && data.firstTxTimestamp === null) {
     return {
-      address: '',
-      ens: data.ens,
-      score: 300,
-      grade: 'F',
-      percentile: 1,
-      factors: [],
-      walletAge: 0,
-      totalTxns: 0,
-      protocolsUsed: [],
-      timestamp: Date.now(),
-      newWallet: true,
+      address: '', ens: data.ens, score: 300, grade: 'F', percentile: 1,
+      factors: [], walletAge: 0, totalTxns: 0, protocolsUsed: [],
+      timestamp: Date.now(), newWallet: true,
     }
   }
 
   const now = Date.now() / 1000
-  const walletAgeDays   = data.firstTxTimestamp ? Math.floor((now - data.firstTxTimestamp) / 86400) : 0
-  const walletAgeMonths = Math.floor(walletAgeDays / 30)
+  const walletAgeDays = data.firstTxTimestamp ? Math.floor((now - data.firstTxTimestamp) / 86400) : 0
 
-  // Borrower-only gate. The model is trained exclusively on wallets that have
-  // borrowed onchain, so a non-borrower has no observable credit outcome and
-  // cannot be scored honestly. Rather than emit a misleading number, return a
-  // dedicated "no borrowing history" state. The score page renders this case
-  // explicitly. This is gated on the lending protocols ChainScore tracks.
+  // Borrower-only gate. The model is trained exclusively on wallets that borrowed
+  // onchain, so a non-borrower has no observable credit outcome. Return the honest
+  // "no borrowing history" state instead of a misleading number.
   const totalBorrowsDetected = data.aaveBorrows + data.compoundBorrows
   if (totalBorrowsDetected === 0) {
     return {
-      address: '',
-      ens: data.ens,
-      score: 0,
-      grade: 'F',
-      percentile: 0,
-      factors: [],
-      walletAge: walletAgeDays,
-      totalTxns: data.txCount,
-      protocolsUsed: data.protocolsUsed,
-      timestamp: Date.now(),
-      newWallet: false,
-      noBorrowHistory: true,
+      address: '', ens: data.ens, score: 0, grade: 'F', percentile: 0,
+      factors: [], walletAge: walletAgeDays, totalTxns: data.txCount,
+      protocolsUsed: data.protocolsUsed, timestamp: Date.now(),
+      newWallet: false, noBorrowHistory: true,
     }
   }
 
-  // ML inference
-  let score: number
-  if (lrModel) {
-    const features = buildFeatureVector(data, walletAgeDays)
-    const prob = lrPredict(features)
-    score = calibrateScore(prob)
-  } else if (xgbModel) {
-    const features = buildFeatureVector(data, walletAgeDays)
-    const prob = xgbPredict(features)
-    score = calibrateScore(prob)
-  } else {
-    // Fallback: formula-based scoring
-    const factors_temp = buildFactors(data, walletAgeDays, walletAgeMonths)
-    const rawWeighted = factors_temp.reduce((sum, f) => sum + f.weightedScore, 0)
-    score = Math.round(300 + (rawWeighted / 100) * 550)
+  const features = buildFeatureVector(data, walletAgeDays)
+
+  // Single prediction → headline AND factor bars both derive from it.
+  if ((xgbModel || lrModel) && meta) {
+    const pred = xgbModel ? predictXGB(features) : predictLR(features)
+    const rawProbLiq = sigmoid(pred.marginLiq)
+    const pd = calibratePD(rawProbLiq)
+    const score = pdToScore(pd)
+    const factors = buildModelFactors(data, pred.contribs)
+    return {
+      address: '', ens: data.ens, score,
+      grade: scoreToGrade(score), percentile: scoreToPercentile(score),
+      factors, walletAge: walletAgeDays, totalTxns: data.txCount,
+      protocolsUsed: data.protocolsUsed, timestamp: Date.now(),
+      newWallet: false, calibratedPD: pd, modelVersion: meta.model_version,
+    }
   }
 
-  const factors = buildFactors(data, walletAgeDays, walletAgeMonths)
-
+  // Last-resort fallback if no model artifact is present at all.
+  const score = 300 + Math.round(Math.min(1, totalBorrowsDetected / 20) * 300)
   return {
-    address: '',
-    ens: data.ens,
-    score,
-    grade: scoreToGrade(score),
-    percentile: scoreToPercentile(score),
-    factors,
-    walletAge: walletAgeDays,
-    totalTxns: data.txCount,
-    protocolsUsed: data.protocolsUsed,
-    timestamp: Date.now(),
-    newWallet: false,
+    address: '', ens: data.ens, score, grade: scoreToGrade(score),
+    percentile: scoreToPercentile(score), factors: [], walletAge: walletAgeDays,
+    totalTxns: data.txCount, protocolsUsed: data.protocolsUsed,
+    timestamp: Date.now(), newWallet: false,
   }
 }
