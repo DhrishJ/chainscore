@@ -1,0 +1,68 @@
+{
+  "_comment": "GENERATED from model/config.yaml by model/src/export_coverage.py. Do not edit by hand.",
+  "deployments": [
+    {
+      "protocol": "aave_v3",
+      "family": "aave",
+      "chain": "ethereum",
+      "schema": "aave_v3",
+      "subgraphId": "GQFbb95cE6d8mV989mL5figjaGaKCQB3xqYrr1bRyXqF"
+    },
+    {
+      "protocol": "compound_v2",
+      "family": "compound",
+      "chain": "ethereum",
+      "schema": "messari",
+      "subgraphId": "4TbqVA8p2DoBd5qDbPMwmDZv3CsJjWtxo8nVSqF2tA9a"
+    },
+    {
+      "protocol": "aave_v2",
+      "family": "aave",
+      "chain": "ethereum",
+      "schema": "messari",
+      "subgraphId": "C2zniPn45RnLDGzVeGZCx2Sw3GXrbc9gL4ZfL8B8Em2j"
+    },
+    {
+      "protocol": "aave_v3",
+      "family": "aave",
+      "chain": "arbitrum",
+      "schema": "messari",
+      "subgraphId": "4xyasjQeREe7PxnF6wVdobZvCw5mhoHZq3T7guRpuNPf"
+    },
+    {
+      "protocol": "aave_v3",
+      "family": "aave",
+      "chain": "scroll",
+      "schema": "aave_v3",
+      "subgraphId": "74JwenoHZb2aAYVGCCSdPWzi9mm745dyHyQQVoZ7Sbub"
+    },
+    {
+      "protocol": "aave_v3",
+      "family": "aave",
+      "chain": "avalanche",
+      "schema": "aave_v3",
+      "subgraphId": "2h9woxy8RTjHu1HJsCEnmzpPHFArU33avmUh4f71JpVn"
+    },
+    {
+      "protocol": "aave_v3",
+      "family": "aave",
+      "chain": "optimism",
+      "schema": "aave_v3",
+      "subgraphId": "DSfLz8oQBUeU5atALgUFQKMTSYV9mZAVYp4noLSXAfvb"
+    },
+    {
+      "protocol": "aave_v3",
+      "family": "aave",
+      "chain": "polygon",
+      "schema": "aave_v3",
+      "subgraphId": "Co2URyXjnxaw8WqxKyVHdirq9Ahhm5vcTs4dMedAq211"
+    },
+    {
+      "protocol": "aave_v3",
+      "family": "aave",
+      "chain": "base",
+      "schema": "messari",
+      "subgraphId": "D7mapexM5ZsQckLJai2FawTKXJ7CqYGKM8PErnS3cJi9"
+    }
+  ]
+}

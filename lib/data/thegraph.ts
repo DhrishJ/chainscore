@@ -1,8 +1,20 @@
-// The Graph decentralized network gateway subgraph IDs
-const SUBGRAPH_IDS = {
-  // Aave V2 subgraph deprecated on The Graph decentralized network
-  aaveV3: 'GQFbb95cE6d8mV989mL5figjaGaKCQB3xqYrr1bRyXqF',
-  compoundV2: '4TbqVA8p2DoBd5qDbPMwmDZv3CsJjWtxo8nVSqF2tA9a',
+import coverage from './coverage.generated.json'
+
+// Single source of truth for protocol/chain coverage. coverage.generated.json is
+// GENERATED from model/config.yaml by model/src/export_coverage.py, so live
+// detection can never drift from training coverage. To change coverage, edit the
+// protocols registry in config.yaml and regenerate. Never hand edit either file.
+type Deployment = {
+  protocol: string
+  family: string
+  chain: string
+  schema: 'aave_v3' | 'messari'
+  subgraphId: string
+}
+const DEPLOYMENTS = coverage.deployments as Deployment[]
+
+function deploymentsFor(family: string, chainSlug: string): Deployment[] {
+  return DEPLOYMENTS.filter((d) => d.family === family && d.chain === chainSlug)
 }
 
 function gatewayUrl(subgraphId: string): string {
@@ -29,39 +41,63 @@ export interface AaveActivityResult {
   error?: string
 }
 
-export async function getAaveActivity(address: string, chainSlug = 'ethereum'): Promise<AaveActivityResult> {
-  if (chainSlug !== 'ethereum') return { borrows: 0, repays: 0, liquidations: 0 }
-
-  const user = address.toLowerCase()
+// Query one deployment for an address. Schema selects the field shape: Aave's own
+// (borrows.user / liquidationCalls) or Messari's standardized
+// (borrows.account / liquidates.liquidatee).
+async function queryDeployment(d: Deployment, addr: string) {
+  const messari = d.schema === 'messari'
+  const borrowerField = messari ? 'account' : 'user'
+  const liqEntity = messari ? 'liquidates' : 'liquidationCalls'
+  const liqField = messari ? 'liquidatee' : 'user'
 
   const query = `
-    query($user: String!) {
-      borrows(where: { user: $user }, first: 1000) { id }
-      repays(where: { user: $user }, first: 1000) { id }
-      liquidationCalls(where: { user: $user }, first: 100) { id }
+    query($a: String!) {
+      borrows(where: { ${borrowerField}: $a }, first: 1000) { id }
+      repays(where: { ${borrowerField}: $a }, first: 1000) { id }
+      ${liqEntity}(where: { ${liqField}: $a }, first: 100) { id }
     }
   `
+  const data = await queryGraph(gatewayUrl(d.subgraphId), query, { a: addr })
+  return {
+    borrows: data?.borrows?.length || 0,
+    repays: data?.repays?.length || 0,
+    liquidations: data?.[liqEntity]?.length || 0,
+  }
+}
 
-  let borrows = 0, repays = 0, liquidations = 0
+// Aggregate every verified deployment of a protocol family on a chain. One
+// deployment being down does not fail the whole lookup or falsely return
+// "no history": failures are logged and the other deployments still count.
+async function aggregateFamily(
+  family: string,
+  address: string,
+  chainSlug: string,
+): Promise<AaveActivityResult> {
+  const deps = deploymentsFor(family, chainSlug)
+  if (deps.length === 0) return { borrows: 0, repays: 0, liquidations: 0 }
+
+  const addr = address.toLowerCase()
+  let borrows = 0
+  let repays = 0
+  let liquidations = 0
   const errors: string[] = []
 
-  try {
-    const v3 = await queryGraph(gatewayUrl(SUBGRAPH_IDS.aaveV3), query, { user })
-    if (v3) {
-      borrows += v3.borrows?.length || 0
-      repays += v3.repays?.length || 0
-      liquidations += v3.liquidationCalls?.length || 0
+  const results = await Promise.allSettled(deps.map((d) => queryDeployment(d, addr)))
+  results.forEach((r, i) => {
+    if (r.status === 'fulfilled') {
+      borrows += r.value.borrows
+      repays += r.value.repays
+      liquidations += r.value.liquidations
+    } else {
+      errors.push(`${deps[i].protocol}/${deps[i].chain}: ${r.reason}`)
     }
-  } catch (e) {
-    errors.push(`v3: ${e}`)
-  }
+  })
 
-  return {
-    borrows,
-    repays,
-    liquidations,
-    ...(errors.length ? { error: errors.join('; ') } : {}),
-  }
+  return { borrows, repays, liquidations, ...(errors.length ? { error: errors.join('; ') } : {}) }
+}
+
+export async function getAaveActivity(address: string, chainSlug = 'ethereum'): Promise<AaveActivityResult> {
+  return aggregateFamily('aave', address, chainSlug)
 }
 
 export interface CompoundActivityResult {
@@ -72,29 +108,7 @@ export interface CompoundActivityResult {
 }
 
 export async function getCompoundActivity(address: string, chainSlug = 'ethereum'): Promise<CompoundActivityResult> {
-  if (chainSlug !== 'ethereum') return { borrows: 0, repays: 0, liquidations: 0 }
-
-  const account = address.toLowerCase()
-
-  // Messari standardized lending schema
-  const query = `
-    query($account: String!) {
-      borrows(where: { account: $account }, first: 1000) { id }
-      repays(where: { account: $account }, first: 1000) { id }
-      liquidates(where: { liquidatee: $account }, first: 100) { id }
-    }
-  `
-
-  try {
-    const data = await queryGraph(gatewayUrl(SUBGRAPH_IDS.compoundV2), query, { account })
-    return {
-      borrows: data?.borrows?.length || 0,
-      repays: data?.repays?.length || 0,
-      liquidations: data?.liquidates?.length || 0,
-    }
-  } catch (e) {
-    return { borrows: 0, repays: 0, liquidations: 0, error: String(e) }
-  }
+  return aggregateFamily('compound', address, chainSlug)
 }
 
 // Kept for interface compatibility — LP detection now done in alchemy.ts via NFT API
