@@ -1,9 +1,33 @@
-function etherscanBase(chainId: number): string {
-  return `https://api.etherscan.io/v2/api?chainid=${chainId}`
-}
+import coverage from './coverage.generated.json'
+
+// Per-chain txlist endpoint resolver. Single source: model/config.yaml ->
+// coverage.generated.json (txExplorers). Etherscan v2 free tier does not serve
+// Scroll or Avalanche, so those route to verified keyless explorers
+// (blockscout.scroll.io, api.snowtrace.io). All return the Etherscan txlist shape.
+interface TxExplorer { chainId: number; kind: string; base?: string }
+const TX_EXPLORERS: Record<string, TxExplorer> = (coverage as { txExplorers?: Record<string, TxExplorer> }).txExplorers || {}
+const BY_CHAIN_ID: Record<number, TxExplorer> = Object.fromEntries(
+  Object.values(TX_EXPLORERS).map((e) => [e.chainId, e])
+)
 
 function apiKey(): string {
   return process.env.ETHERSCAN_API_KEY || ''
+}
+
+// Build a txlist URL for the given chain. `action` is txlist; `extra` appends
+// paging/sort. Returns null if the chain has no configured explorer.
+function txlistUrl(address: string, chainId: number, extra: string): string | null {
+  const e = BY_CHAIN_ID[chainId]
+  if (!e) {
+    // Fallback to Etherscan v2 for any chain not in the map (keeps old behavior).
+    return `https://api.etherscan.io/v2/api?chainid=${chainId}&module=account&action=txlist&address=${address}&${extra}&apikey=${apiKey()}`
+  }
+  const q = `module=account&action=txlist&address=${address}&${extra}`
+  if (e.kind === 'etherscan_v2') {
+    return `https://api.etherscan.io/v2/api?chainid=${e.chainId}&${q}&apikey=${apiKey()}`
+  }
+  // blockscout / snowtrace: keyless Etherscan-compatible explorer
+  return `${e.base}?${q}`
 }
 
 export interface TxHistoryResult {
@@ -23,7 +47,8 @@ export interface FirstTxResult {
 
 export async function getFirstTransaction(address: string, chainId = 1): Promise<FirstTxResult> {
   try {
-    const url = `${etherscanBase(chainId)}&module=account&action=txlist&address=${address}&sort=asc&page=1&offset=1&apikey=${apiKey()}`
+    const url = txlistUrl(address, chainId, 'sort=asc&page=1&offset=1')
+    if (!url) return { timestamp: null }
     const res = await fetch(url, { next: { revalidate: 3600 } })
     const json = await res.json()
 
@@ -39,13 +64,15 @@ export async function getFirstTransaction(address: string, chainId = 1): Promise
 }
 
 export async function getTransactionHistory(address: string, chainId = 1): Promise<TxHistoryResult> {
+  const empty = { txCount: 0, txCount30d: 0, txCount90d: 0, txCount180d: 0, activeDaysCount: 0, activeMonthsLast12: 0 }
   try {
-    const url = `${etherscanBase(chainId)}&module=account&action=txlist&address=${address}&sort=desc&page=1&offset=10000&apikey=${apiKey()}`
+    const url = txlistUrl(address, chainId, 'sort=desc&page=1&offset=10000')
+    if (!url) return empty
     const res = await fetch(url, { next: { revalidate: 3600 } })
     const json = await res.json()
 
     if (json.status !== '1') {
-      return { txCount: 0, txCount30d: 0, txCount90d: 0, txCount180d: 0, activeDaysCount: 0, activeMonthsLast12: 0 }
+      return empty
     }
 
     const txns: Array<{ timeStamp: string }> = json.result || []
@@ -83,6 +110,6 @@ export async function getTransactionHistory(address: string, chainId = 1): Promi
       activeMonthsLast12: monthSet.size,
     }
   } catch (e) {
-    return { txCount: 0, txCount30d: 0, txCount90d: 0, txCount180d: 0, activeDaysCount: 0, activeMonthsLast12: 0, error: String(e) }
+    return { ...empty, error: String(e) }
   }
 }

@@ -232,6 +232,12 @@ function buildFeatureVector(data: RawWalletData, walletAgeDays: number): number[
     data.hasStakedETH,
   ].filter(Boolean).length
 
+  // Behavioral risk ratios (Phase B), same definitions/clips as build_features.py.
+  const borrowVelocity = Math.min(totalBorrows / Math.max(walletAgeDays, 1), 50)
+  const liquidationRate = Math.min(priorLiqCount / Math.max(totalBorrows, 1), 10)
+  const netUnpaidBorrows = Math.min(Math.max(totalBorrows - totalRepays, 0), 1000)
+  const defiTenureRatio = Math.min((data.daysSinceFirstDefi ?? 0) / Math.max(walletAgeDays, 1), 1.5)
+
   return [
     walletAgeDays,
     walletAgeDays / 30,
@@ -263,6 +269,11 @@ function buildFeatureVector(data: RawWalletData, walletAgeDays: number): number[
     data.hasETH ? 1 : 0,
     data.hasENS ? 1 : 0,
     data.isGnosisSafe ? 1 : 0,
+    // Behavioral risk ratios (Phase B)
+    borrowVelocity,
+    liquidationRate,
+    netUnpaidBorrows,
+    defiTenureRatio,
   ]
 }
 
