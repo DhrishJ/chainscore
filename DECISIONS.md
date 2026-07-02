@@ -3,6 +3,48 @@
 Running log of assumptions and decisions made during the rebuild. Newest first.
 Each entry: date, decision, reasoning, alternatives rejected.
 
+## 2026-07-02: Phase 1 (Workstream B + G basics)
+
+**D-013. IP rate limiting is per-instance best effort until a durable store exists.**
+The middleware limiter keeps its window state in instance memory. On Vercel
+each serverless instance counts independently, so the effective ceiling is
+(instances x limit). That still stops naive scraping and cost amplification.
+A durable limiter (Upstash Redis or similar) needs a new paid service, which
+is an owner decision, deferred to Workstream E.
+
+**D-012. Alchemy transfers are the independent second tx-history source.**
+alchemy_getAssetTransfers reports value transfers, not strictly transactions,
+so counts can differ slightly from an explorer txlist. Accepted because the
+activity features tolerate small deltas, mismatches surface through the
+reconciliation log rather than silently, and infrastructure independence from
+the Etherscan family is the point.
+
+**D-011. Notifications endpoints stay unauthenticated in Phase 1, documented.**
+GET and mark-read PATCH on /api/notifications/[address] are open. Requiring a
+wallet signature to read a notification bell is unacceptable UX; the correct
+fix is a SIWE session, which is full Workstream G scope. Recorded as a known
+gap; notification content should meanwhile avoid sensitive detail.
+
+**D-010. Lender listing PATCH restricted to cancellation.**
+The old endpoint accepted any status string, letting a lender set arbitrary
+lifecycle states (including DEFAULTED). Now only EXPIRED (cancel) is allowed;
+every other transition belongs to the accept/repay flows. This is a deliberate
+behavior tightening, not an accidental regression.
+
+**D-009. Write-route request contract changed for the replay fix.**
+Write endpoints now require { nonceId, signature } referencing a
+server-issued nonce instead of a client-invented { message, signature }. This
+is a breaking change to those request bodies, accepted because the old shape
+was the vulnerability itself and the only known clients (the app's own pages)
+were updated in the same change. GET response contracts are untouched.
+
+**D-008. AuthNonce table ships as schema plus code; the db push needs owner action.**
+The permission layer (correctly) blocked `prisma db push` against the live
+Supabase database. The schema change is additive (one new table). Until the
+owner runs `npx prisma db push` (or approves it), the nonce endpoint returns
+500 and marketplace writes fail closed, which is strictly safer than the
+replayable flow they replace.
+
 ## 2026-07-02: Phase 0
 
 **D-007. Lighthouse baseline measured against local production build.**
