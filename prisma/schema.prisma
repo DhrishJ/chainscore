@@ -105,6 +105,58 @@ model Review {
   reviewee        Wallet   @relation("ReviewsReceived", fields: [revieweeAddress], references: [address])
 }
 
+// Point-in-time feature store (Workstream C). Every row is stamped with the
+// moment its data was valid; nothing may ever be read for an as_of earlier
+// than validAtTs. Scores logged against a snapshot are reproducible:
+// (features, featureSetVersion, modelVersion) fully determine the score.
+model FeatureSnapshot {
+  id                String   @id @default(cuid())
+  address           String
+  chain             String
+  // Unix seconds; the newest data observable inside this vector.
+  validAtTs         Int
+  featureSetVersion String
+  // Ordered feature vector in ml/feature_schema.json order.
+  features          Json
+  dataCompleteness  Float    @default(1)
+  createdAt         DateTime @default(now())
+
+  @@unique([address, chain, validAtTs, featureSetVersion])
+  @@index([address, chain])
+}
+
+// Realized outcomes per (wallet, chain) for a documented criteria version.
+// See LABELS.md; criteriaVersion changes whenever the definition does.
+model OutcomeLabel {
+  id              String   @id @default(cuid())
+  address         String
+  chain           String
+  // Outcome window [windowStartTs, windowEndTs), unix seconds.
+  windowStartTs   Int
+  windowEndTs     Int
+  label           Int
+  criteriaVersion String
+  createdAt       DateTime @default(now())
+
+  @@unique([address, chain, windowStartTs, criteriaVersion])
+  @@index([address, chain])
+}
+
+// One row per reproducible backtest run; the artifact lives in
+// reports/backtest/ and metrics are denormalized here for querying.
+model BacktestRun {
+  id                String   @id @default(cuid())
+  modelVersion      String
+  featureSetVersion String
+  criteriaVersion   String
+  nRows             Int
+  rocAuc            Float
+  prAuc             Float
+  brier             Float
+  reportPath        String
+  createdAt         DateTime @default(now())
+}
+
 // Server-issued, single-use, expiring nonces for authenticated write actions.
 // A signature is only accepted over a message the server itself issued and
 // bound to (address, action), which closes the replay hole where any captured
