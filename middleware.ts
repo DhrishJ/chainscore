@@ -4,6 +4,9 @@ import { createRateLimiter } from '@/lib/rateLimit'
 // Expensive routes fan out to paid third-party APIs (Etherscan, Alchemy,
 // TheGraph, Helius, @vercel/og rendering), so they get a tighter budget.
 const expensiveLimiter = createRateLimiter({ windowMs: 60_000, max: 20 })
+// The Solana RPC proxy serves the wallet UI, which polls; give it headroom
+// without opening the default bucket wider.
+const rpcLimiter = createRateLimiter({ windowMs: 60_000, max: 120 })
 // Everything else under /api gets a looser default budget.
 const defaultLimiter = createRateLimiter({ windowMs: 60_000, max: 60 })
 
@@ -24,8 +27,14 @@ function isExpensiveRoute(pathname: string): boolean {
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
   const ip = resolveIp(request)
-  const limiter = isExpensiveRoute(pathname) ? expensiveLimiter : defaultLimiter
-  const key = `${isExpensiveRoute(pathname) ? 'expensive' : 'default'}:${ip}`
+  const bucket = isExpensiveRoute(pathname)
+    ? 'expensive'
+    : pathname.startsWith('/api/solana-rpc')
+      ? 'rpc'
+      : 'default'
+  const limiter =
+    bucket === 'expensive' ? expensiveLimiter : bucket === 'rpc' ? rpcLimiter : defaultLimiter
+  const key = `${bucket}:${ip}`
 
   const result = limiter.limit(key)
 

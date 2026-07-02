@@ -7,10 +7,9 @@
 //  2. Value scan: the literal values of server-only env vars (from process.env
 //     and .env/.env.local) must not appear in client output.
 //
-// Known exception: NEXT_PUBLIC_HELIUS_API_KEY intentionally ships to the
-// client today (ARCHITECTURE.md 6.2). Until Workstream G lands the server-side
-// proxy, a Helius key match is reported as a loud warning instead of a failure
-// so the pipeline is not permanently red. Every other match fails.
+// Every match fails the build. The historical NEXT_PUBLIC_HELIUS_API_KEY
+// exception was removed when the server-side Solana RPC proxy landed; any
+// Helius key in client output is a regression now.
 
 import fs from 'node:fs'
 import path from 'node:path'
@@ -86,11 +85,7 @@ for (const file of walk(STATIC_DIR)) {
 
   for (const [value, key] of secretValues) {
     if (!content.includes(value)) continue
-    if (key === 'HELIUS_API_KEY') {
-      warnings.push(`${rel}: value of ${key} found in client bundle (known NEXT_PUBLIC_HELIUS_API_KEY exposure, fix scheduled in Workstream G)`)
-    } else {
-      failures.push(`${rel}: value of server env var ${key} found in client bundle`)
-    }
+    failures.push(`${rel}: value of server env var ${key} found in client bundle`)
   }
 }
 
