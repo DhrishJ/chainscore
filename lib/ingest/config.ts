@@ -10,10 +10,13 @@ import { TxHistorySource } from './types'
 // - Etherscan v2 free tier serves eth/polygon/arbitrum/optimism/base/bnb but
 //   NOT Avalanche or Scroll, which is exactly the degraded-features gap this
 //   workstream closes.
-// - Snowtrace (Routescan) is keyless and Etherscan-shaped for Avalanche.
-// - Scroll's Blockscout is keyless and Etherscan-shaped. Scroll (534352) is
-//   not yet in lib/chains.ts (no UI path), but the ingest layer supports it
-//   for the Workstream C backfill.
+// - Snowtrace (Routescan) is keyless and Etherscan-shaped for Avalanche
+//   (verified live 2026-07-02).
+// - Scroll: the old blockscout.scroll.io instance was retired (it now
+//   redirects to Scrollscan, which needs its own API key). Alchemy serves
+//   Scroll once the network is enabled on the Alchemy app (dashboard
+//   toggle). Scroll (534352) is not yet in lib/chains.ts (no UI path); the
+//   ingest layer carries it for the Workstream C backfill.
 // - Alchemy transfers act as the independent second source where available.
 
 const etherscanV2 = new EtherscanCompatibleSource({
@@ -31,14 +34,6 @@ const snowtrace = new EtherscanCompatibleSource({
   minIntervalMs: 350,
 })
 
-const scrollBlockscout = new EtherscanCompatibleSource({
-  name: 'blockscout_scroll',
-  kind: 'keyless',
-  baseUrl: 'https://blockscout.scroll.io/api',
-  chainIds: [534352],
-  minIntervalMs: 350,
-})
-
 const alchemy = new AlchemyTransfersSource()
 
 const PRIORITY: Record<number, TxHistorySource[]> = {
@@ -49,7 +44,7 @@ const PRIORITY: Record<number, TxHistorySource[]> = {
   8453: [etherscanV2, alchemy],
   56: [etherscanV2],
   43114: [snowtrace, etherscanV2],
-  534352: [scrollBlockscout],
+  534352: [alchemy],
 }
 
 export function txHistorySourcesFor(chainId: number): TxHistorySource[] {

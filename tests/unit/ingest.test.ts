@@ -167,7 +167,7 @@ describe('per-chain source priority', () => {
     expect(names).toContain('alchemy')
   })
 
-  it('gives Scroll a Blockscout path', () => {
-    expect(txHistorySourcesFor(534352)[0].name).toBe('blockscout_scroll')
+  it('gives Scroll a non-Etherscan path', () => {
+    expect(txHistorySourcesFor(534352)[0].name).toBe('alchemy')
   })
 })

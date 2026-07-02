@@ -9,13 +9,15 @@ import { SourceError, TxHistorySource, TxRecord } from '../types'
 // infrastructure than the Etherscan family.
 
 // getAssetTransfers with the 'external' category is available on these
-// networks only (notably not Avalanche or BNB).
+// networks only (notably not Avalanche or BNB). Scroll requires the network
+// to be enabled on the Alchemy app (dashboard toggle, free tier).
 const NETWORK_BY_CHAIN: Record<number, string> = {
   1: 'eth-mainnet',
   137: 'polygon-mainnet',
   42161: 'arb-mainnet',
   10: 'opt-mainnet',
   8453: 'base-mainnet',
+  534352: 'scroll-mainnet',
 }
 
 interface TransfersPage {
