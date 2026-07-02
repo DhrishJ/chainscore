@@ -1,4 +1,5 @@
 import type { ChainConfig } from '@/lib/chains'
+import { env } from '@/lib/env.server'
 
 // Aave V2 aTokens (Ethereum only)
 const AAVE_V2_TOKENS = new Set([
@@ -22,11 +23,11 @@ const COMPOUND_V2_TOKENS = new Set([
 const UNISWAP_V3_POSITIONS = '0xC36442b4a4522E871399CD717aBDD847Ab11FE88'
 
 function rpcUrl(network: string): string {
-  return `https://${network}.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY || ''}`
+  return `https://${network}.g.alchemy.com/v2/${env.ALCHEMY_API_KEY}`
 }
 
 function nftApiBase(network: string): string {
-  return `https://${network}.g.alchemy.com/nft/v3/${process.env.ALCHEMY_API_KEY || ''}`
+  return `https://${network}.g.alchemy.com/nft/v3/${env.ALCHEMY_API_KEY}`
 }
 
 async function alchemyRpc(network: string, method: string, params: unknown[]): Promise<unknown> {

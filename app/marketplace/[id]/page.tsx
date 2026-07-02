@@ -1,10 +1,11 @@
 import { notFound } from 'next/navigation'
 import { ListingDetailClient } from './ListingDetailClient'
+import { clientEnv } from '@/lib/env.client'
 
 export const dynamic = 'force-dynamic'
 
 async function getListing(id: string) {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+  const baseUrl = clientEnv.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
   try {
     const res = await fetch(`${baseUrl}/api/listings/${id}`, { cache: 'no-store' })
     if (!res.ok) return null

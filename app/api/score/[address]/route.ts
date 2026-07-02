@@ -17,12 +17,13 @@ import { getChain } from '@/lib/chains'
 import { isSolanaAddress } from '@/lib/solanaAuth'
 import type { RawWalletData } from '@/types'
 import { recentScores } from '@/lib/recentScores'
+import { env } from '@/lib/env.server'
 
 export const revalidate = 3600
 
 const ensClient = createPublicClient({
   chain: mainnet,
-  transport: http('https://eth-mainnet.g.alchemy.com/v2/' + (process.env.ALCHEMY_API_KEY || '')),
+  transport: http('https://eth-mainnet.g.alchemy.com/v2/' + env.ALCHEMY_API_KEY),
 })
 
 export async function GET(

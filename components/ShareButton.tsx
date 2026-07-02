@@ -1,4 +1,5 @@
 'use client'
+import { clientEnv } from '@/lib/env.client'
 
 interface ShareButtonProps {
   address: string
@@ -7,7 +8,7 @@ interface ShareButtonProps {
 }
 
 export function ShareButton({ address, score, grade }: ShareButtonProps) {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://chainscore.dev'
+  const appUrl = clientEnv.NEXT_PUBLIC_APP_URL || 'https://chainscore.dev'
   const scoreUrl = `${appUrl}/score/${address}`
 
   function handleShare() {

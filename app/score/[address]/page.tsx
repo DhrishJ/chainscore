@@ -23,6 +23,8 @@ import {
   getSolanaDefiActivity,
 } from '@/lib/data/helius'
 import { computeSolanaScore } from '@/lib/data/solanaScorer'
+import { env } from '@/lib/env.server'
+import { clientEnv } from '@/lib/env.client'
 import type { ScoreResult, RawWalletData } from '@/types'
 
 interface Props {
@@ -34,7 +36,7 @@ interface Props {
 const ensClient = createPublicClient({
   chain: mainnet,
   transport: http(
-    'https://eth-mainnet.g.alchemy.com/v2/' + (process.env.ALCHEMY_API_KEY || '')
+    'https://eth-mainnet.g.alchemy.com/v2/' + env.ALCHEMY_API_KEY
   ),
 })
 
@@ -198,7 +200,7 @@ async function resolveAndScoreSolana(address: string): Promise<ScoreResult | nul
 }
 
 export async function generateMetadata({ params, searchParams }: Props): Promise<Metadata> {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://chainscore.dev'
+  const appUrl = clientEnv.NEXT_PUBLIC_APP_URL || 'https://chainscore.dev'
   const { address } = params
 
   return {

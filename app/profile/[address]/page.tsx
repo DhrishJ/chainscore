@@ -3,11 +3,12 @@ import { ScoreGauge } from '@/components/ScoreGauge'
 import { ScoreBadge } from '@/components/ScoreBadge'
 import Link from 'next/link'
 import type { Factor } from '@/types'
+import { clientEnv } from '@/lib/env.client'
 
 export const dynamic = 'force-dynamic'
 
 async function getProfileData(address: string) {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+  const baseUrl = clientEnv.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
   const [profileRes, scoreRes] = await Promise.allSettled([
     fetch(`${baseUrl}/api/profile/${address}`, { cache: 'no-store' }),
     fetch(`${baseUrl}/api/score/${address}`, { cache: 'no-store' }),
