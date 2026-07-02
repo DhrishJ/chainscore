@@ -6,6 +6,7 @@ import { useSignMessage } from 'wagmi'
 import { ScoreBadge } from '@/components/ScoreBadge'
 import { calculateOfferedAPR } from '@/lib/apr'
 import { calculateFee } from '@/lib/fees'
+import { requestNonce } from '@/lib/authClient'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 
@@ -41,14 +42,13 @@ export default function CreateListingPage() {
     setError(null)
 
     try {
-      const nonce = Math.random().toString(36).slice(2)
-      const message = `ChainScore: Create Loan Listing\nNonce: ${nonce}\nTimestamp: ${new Date().toISOString().split('T')[0]}`
+      const { nonceId, message } = await requestNonce(address, 'create_listing')
       const signature = await signMessageAsync({ message })
 
       const res = await fetch('/api/listings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ address, signature, message, listing: form }),
+        body: JSON.stringify({ address, signature, nonceId, listing: form }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Failed to create listing')

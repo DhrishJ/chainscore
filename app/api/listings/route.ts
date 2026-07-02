@@ -1,46 +1,67 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
 import { prisma } from '@/lib/db'
-import { verifyWalletSignature } from '@/lib/auth'
-import { verifySolanaSignature, isSolanaAddress } from '@/lib/solanaAuth'
+import { verifyAuthorizedAction } from '@/lib/authNonce'
+import { isSolanaAddress } from '@/lib/solanaAuth'
 import { isAddress } from 'viem'
 import type { Prisma } from '@prisma/client'
+import { listingsQuerySchema, parseOrError } from '@/lib/validation'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
 
-  const currency = searchParams.get('currency')
-  const minAmount = searchParams.get('minAmount')
-  const maxAmount = searchParams.get('maxAmount')
-  const minAPR = searchParams.get('minAPR')
-  const maxAPR = searchParams.get('maxAPR')
-  const minDuration = searchParams.get('minDuration')
-  const maxDuration = searchParams.get('maxDuration')
-  const minLenderScore = searchParams.get('minLenderScore')
-  const chain = searchParams.get('chain') // 'EVM' | 'SOLANA' | null
-  const sort = searchParams.get('sort') || 'newest'
-  const page = parseInt(searchParams.get('page') || '1', 10)
+  const rawQuery = {
+    currency: searchParams.get('currency') || undefined,
+    minAmount: searchParams.get('minAmount') || undefined,
+    maxAmount: searchParams.get('maxAmount') || undefined,
+    minAPR: searchParams.get('minAPR') || undefined,
+    maxAPR: searchParams.get('maxAPR') || undefined,
+    minDuration: searchParams.get('minDuration') || undefined,
+    maxDuration: searchParams.get('maxDuration') || undefined,
+    minLenderScore: searchParams.get('minLenderScore') || undefined,
+    chain: searchParams.get('chain') || undefined, // 'EVM' | 'SOLANA' | undefined
+    sort: searchParams.get('sort') || undefined,
+    page: searchParams.get('page') || undefined,
+  }
+
+  const parsedQuery = parseOrError(listingsQuerySchema, rawQuery)
+  if (!parsedQuery.ok) return parsedQuery.response
+
+  const {
+    currency,
+    minAmount,
+    maxAmount,
+    minAPR,
+    maxAPR,
+    minDuration,
+    maxDuration,
+    minLenderScore,
+    chain,
+    sort,
+    page,
+  } = parsedQuery.data
   const limit = 20
 
   const where: Prisma.LoanListingWhereInput = { status: 'OPEN', expiresAt: { gt: new Date() } }
   if (currency) where.currency = currency
   if (chain) where.chain = chain
-  if (minAmount || maxAmount) {
+  if (minAmount !== undefined || maxAmount !== undefined) {
     where.amount = {}
-    if (minAmount) where.amount.gte = parseFloat(minAmount)
-    if (maxAmount) where.amount.lte = parseFloat(maxAmount)
+    if (minAmount !== undefined) where.amount.gte = minAmount
+    if (maxAmount !== undefined) where.amount.lte = maxAmount
   }
-  if (minAPR) where.minAPR = { gte: parseFloat(minAPR) }
-  if (maxAPR) where.maxAPR = { lte: parseFloat(maxAPR) }
-  if (minDuration && maxDuration) {
-    where.durationDays = { gte: parseInt(minDuration), lte: parseInt(maxDuration) }
-  } else if (minDuration) {
-    where.durationDays = { gte: parseInt(minDuration) }
-  } else if (maxDuration) {
-    where.durationDays = { lte: parseInt(maxDuration) }
+  if (minAPR !== undefined) where.minAPR = { gte: minAPR }
+  if (maxAPR !== undefined) where.maxAPR = { lte: maxAPR }
+  if (minDuration !== undefined && maxDuration !== undefined) {
+    where.durationDays = { gte: minDuration, lte: maxDuration }
+  } else if (minDuration !== undefined) {
+    where.durationDays = { gte: minDuration }
+  } else if (maxDuration !== undefined) {
+    where.durationDays = { lte: maxDuration }
   }
-  if (minLenderScore) where.lenderScore = { gte: parseInt(minLenderScore) }
+  if (minLenderScore !== undefined) where.lenderScore = { gte: minLenderScore }
 
   const orderBy =
     sort === 'lowest_apr' ? { minAPR: 'asc' as const } :
@@ -66,29 +87,53 @@ export async function GET(req: NextRequest) {
   }
 }
 
-export async function POST(req: NextRequest) {
-  const body = await req.json()
-  const { address, signature, message, listing } = body
+const listingSchema = z
+  .object({
+    amount: z.coerce.number().positive().finite().max(1_000_000_000),
+    currency: z.string().regex(/^[A-Za-z0-9]{2,10}$/),
+    minAPR: z.coerce.number().min(0).max(1000),
+    maxAPR: z.coerce.number().min(0).max(1000),
+    durationDays: z.coerce.number().int().min(1).max(3650),
+    minBorrowerScore: z.coerce.number().int().min(300).max(850),
+    collateralRequired: z.coerce.number().min(0).max(1000),
+    expiresAt: z.coerce.date(),
+    terms: z.string().max(2000).optional().default(''),
+  })
+  .refine((l) => l.maxAPR >= l.minAPR, { message: 'maxAPR must be >= minAPR' })
+  .refine((l) => l.expiresAt.getTime() > Date.now(), { message: 'expiresAt must be in the future' })
 
-  if (!address) {
-    return NextResponse.json({ error: 'Address required' }, { status: 400 })
+const createBodySchema = z.object({
+  address: z.string().min(1).max(64),
+  nonceId: z.string().min(1).max(128),
+  signature: z.string().min(1).max(2048),
+  listing: listingSchema,
+})
+
+export async function POST(req: NextRequest) {
+  let raw: unknown
+  try {
+    raw = await req.json()
+  } catch {
+    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
   }
+
+  const parsed = createBodySchema.safeParse(raw)
+  if (!parsed.success) {
+    const issue = parsed.error.issues[0]
+    return NextResponse.json(
+      { error: `Invalid listing: ${issue.path.join('.')} ${issue.message}` },
+      { status: 400 }
+    )
+  }
+  const { address, nonceId, signature, listing } = parsed.data
 
   const isSol = isSolanaAddress(address)
+  if (!isSol && !isAddress(address)) {
+    return NextResponse.json({ error: 'Invalid address' }, { status: 400 })
+  }
 
-  // Verify signature
-  let valid = false
-  if (isSol) {
-    valid = verifySolanaSignature(address, message, signature)
-  } else {
-    if (!isAddress(address)) {
-      return NextResponse.json({ error: 'Invalid address' }, { status: 400 })
-    }
-    valid = await verifyWalletSignature(address, message, signature)
-  }
-  if (!valid) {
-    return NextResponse.json({ error: 'Invalid signature' }, { status: 401 })
-  }
+  const auth = await verifyAuthorizedAction({ address, action: 'create_listing', nonceId, signature })
+  if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status })
 
   const walletAddress = isSol ? address : address.toLowerCase()
   const wallet = await prisma.wallet.findUnique({ where: { address: walletAddress } })
@@ -96,25 +141,19 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'ChainScore of 500+ required to post a listing' }, { status: 403 })
   }
 
-  const { amount, currency, minAPR, maxAPR, durationDays, minBorrowerScore, collateralRequired, expiresAt, terms } = listing
-
-  if (!amount || !currency || minAPR == null || maxAPR == null || !durationDays || !minBorrowerScore || !collateralRequired || !expiresAt) {
-    return NextResponse.json({ error: 'Missing required listing fields' }, { status: 400 })
-  }
-
   const newListing = await prisma.loanListing.create({
     data: {
       lenderAddress: walletAddress,
       lenderScore: wallet.score,
-      amount: parseFloat(amount),
-      currency,
-      minAPR: parseFloat(minAPR),
-      maxAPR: parseFloat(maxAPR),
-      durationDays: parseInt(durationDays),
-      minBorrowerScore: parseInt(minBorrowerScore),
-      collateralRequired: parseFloat(collateralRequired),
-      expiresAt: new Date(expiresAt),
-      terms: terms || '',
+      amount: listing.amount,
+      currency: listing.currency.toUpperCase(),
+      minAPR: listing.minAPR,
+      maxAPR: listing.maxAPR,
+      durationDays: listing.durationDays,
+      minBorrowerScore: listing.minBorrowerScore,
+      collateralRequired: listing.collateralRequired,
+      expiresAt: listing.expiresAt,
+      terms: listing.terms,
       chain: isSol ? 'SOLANA' : 'EVM',
     },
   })
