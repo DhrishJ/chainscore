@@ -28,6 +28,11 @@ export interface ScoreResult {
   // protocols ChainScore tracks. ChainScore only scores borrowers, so these
   // wallets get an honest "no credit history" state instead of a number.
   noBorrowHistory?: boolean
+  // Additive data-quality fields (Workstream B). Fraction of the feature
+  // input that actually arrived (1 = every source answered) and which source
+  // groups failed. Optional so the v1 contract stays backward compatible.
+  dataCompleteness?: number
+  degradedSources?: string[]
 }
 
 export interface RawWalletData {

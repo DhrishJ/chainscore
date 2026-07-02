@@ -21,6 +21,10 @@ const schema = z.object({
   THEGRAPH_API_KEY: z.string().min(1),
   HELIUS_API_KEY: z.string().min(1),
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
+  // Optional: 'true' enables cross-source ingest reconciliation logging
+  // (doubles provider load for sampled reads; leave off in production
+  // until budgets are sized).
+  INGEST_RECONCILE: z.string().optional(),
 })
 
 const parsed = schema.safeParse(process.env)
