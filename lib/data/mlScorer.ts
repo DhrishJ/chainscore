@@ -356,6 +356,39 @@ function buildModelFactors(data: RawWalletData, contribs: number[]): Factor[] {
 }
 
 // ─────────────────────────────────────────────────────────────
+// Vector scoring (Workstream C, additive)
+// Scores directly from an ordered feature vector in model/schema.json
+// order. The backtest engine uses this so backtests exercise the exact
+// serving path (same trees, same calibration, same band). The live
+// computeScore path below is untouched.
+// ─────────────────────────────────────────────────────────────
+
+export interface VectorPrediction {
+  pd: number
+  score: number
+  marginLiq: number
+  modelVersion: string
+}
+
+export function predictFromFeatureVector(features: number[]): VectorPrediction | null {
+  loadModel()
+  if (!(xgbModel || lrModel) || !meta) return null
+  const pred = xgbModel ? predictXGB(features) : predictLR(features)
+  const pd = calibratePD(sigmoid(pred.marginLiq))
+  return { pd, score: pdToScore(pd), marginLiq: pred.marginLiq, modelVersion: meta.model_version }
+}
+
+export function servingModelMeta(): { modelVersion: string; featureNames: string[]; gradeCutoffs: Record<string, number> } | null {
+  loadModel()
+  if (!meta) return null
+  return {
+    modelVersion: meta.model_version,
+    featureNames: meta.feature_names,
+    gradeCutoffs: meta.grade_cutoffs,
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
 // Main export
 // ─────────────────────────────────────────────────────────────
 
