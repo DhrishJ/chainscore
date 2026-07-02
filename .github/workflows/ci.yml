@@ -1,0 +1,96 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+# Build-time placeholders. Real secrets live in Vercel; nothing in CI needs a
+# working provider key, only a present one (lib/env.server.ts fails the boot
+# on missing vars by design).
+env:
+  DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
+  ETHERSCAN_API_KEY: ci-placeholder
+  ALCHEMY_API_KEY: ci-placeholder
+  THEGRAPH_API_KEY: ci-placeholder
+  HELIUS_API_KEY: ci-placeholder
+  NEXT_PUBLIC_APP_URL: http://localhost:3000
+
+jobs:
+  quality:
+    name: Typecheck, lint, test, build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install (lockfile enforced)
+        run: npm ci
+
+      - name: Lockfile unchanged by install
+        run: git diff --exit-code package-lock.json
+
+      - name: Prisma generate
+        run: npx prisma generate
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Unit tests
+        run: npx vitest run
+
+      - name: Build (includes client-bundle secret check)
+        run: npm run build
+
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+
+      - name: E2E smoke tests
+        run: npx playwright test
+
+  dependency-scan:
+    name: Dependency and supply-chain scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install (lockfile enforced)
+        run: npm ci --ignore-scripts
+
+      # Report-only until the Solana wallet-adapter tree is replaced or
+      # upgraded (DECISIONS.md D-005): the baseline has 2 critical / 21 high
+      # findings there, and gating today would leave CI permanently red.
+      # Flip to a hard gate in the Phase 6 hardening pass.
+      - name: npm audit (report only, see DECISIONS.md D-005)
+        run: npm audit || true
+        continue-on-error: true
+
+      - name: osv-scanner (report only, see DECISIONS.md D-005)
+        uses: google/osv-scanner-action/osv-scanner-action@v2.2.4
+        continue-on-error: true
+        with:
+          scan-args: --lockfile=package-lock.json
+
+  secret-scan:
+    name: Secret scan (gitleaks)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
