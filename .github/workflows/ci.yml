@@ -28,6 +28,11 @@ jobs:
           node-version: 20
           cache: npm
 
+      # The lockfile is produced by npm 11 locally; Node 20 ships npm 10,
+      # which disagrees about optional peer entries. Pin the same major.
+      - name: Pin npm major
+        run: npm install -g npm@11
+
       - name: Install (lockfile enforced)
         run: npm ci
 
@@ -65,6 +70,9 @@ jobs:
         with:
           node-version: 20
           cache: npm
+
+      - name: Pin npm major
+        run: npm install -g npm@11
 
       - name: Install (lockfile enforced)
         run: npm ci --ignore-scripts
