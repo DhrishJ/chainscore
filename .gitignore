@@ -26,3 +26,7 @@ npm-debug.log*
 tsconfig.tsbuildinfo
 
 /lib/generated/prisma
+
+# playwright output
+test-results/
+playwright-report/
