@@ -9,7 +9,8 @@ import { FactorCard } from '@/components/FactorCard'
 import { ImprovementTips } from '@/components/ImprovementTips'
 import { ShareButton } from '@/components/ShareButton'
 import { WalletInput } from '@/components/WalletInput'
-import { getFirstTransaction, getTransactionHistory } from '@/lib/data/etherscan'
+import { getFirstTransaction, getTransactionHistory } from '@/lib/ingest/txHistory'
+import { computeCompleteness } from '@/lib/ingest/completeness'
 import { getTokenBalances } from '@/lib/data/alchemy'
 import { getAaveActivity, getCompoundActivity, getUniswapActivity } from '@/lib/data/thegraph'
 import { computeScore } from '@/lib/data/mlScorer'
@@ -153,6 +154,9 @@ async function resolveAndScore(input: string, chainSlug: string): Promise<ScoreR
 
   const result = computeScore(rawData)
   result.address = address
+  const completeness = computeCompleteness(errors)
+  result.dataCompleteness = completeness.dataCompleteness
+  result.degradedSources = completeness.degradedSources
   if (!result.noBorrowHistory && !result.newWallet) {
     recentScores.add({ address, score: result.score, timestamp: Date.now() })
   }
