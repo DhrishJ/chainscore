@@ -9,6 +9,21 @@ export interface TxRecord {
   hash: string
   // Unix seconds
   timeStamp: number
+  // Counterparty addresses, lowercased. Optional because not every source
+  // exposes them the same way; consumers (entity resolution, wash-trade
+  // detection) must treat their absence as "unknown", not "no counterparty".
+  from?: string
+  // Lowercased; empty string for contract-creation transactions (no `to`).
+  to?: string
+  // Etherscan-compatible txlist: raw transfer value in wei as a decimal
+  // string, taken verbatim from the API's `value` field (exact, no floating
+  // point involved).
+  valueWei?: string
+  // Alchemy getAssetTransfers: `value` comes back as an ETH float (or null),
+  // not wei. Kept as a separate field rather than converted to a wei string,
+  // since a float-to-wei conversion would either lose precision or fabricate
+  // precision the source never had.
+  valueEth?: number
 }
 
 export interface TxHistorySource {

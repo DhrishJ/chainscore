@@ -22,7 +22,7 @@ const ETHERSCAN_V2_BASE = 'https://api.etherscan.io/v2/api'
 interface TxListResponse {
   status: string
   message?: string
-  result?: Array<{ hash: string; timeStamp: string }> | string
+  result?: Array<{ hash: string; timeStamp: string; from?: string; to?: string; value?: string }> | string
 }
 
 export class EtherscanCompatibleSource implements TxHistorySource {
@@ -64,7 +64,16 @@ export class EtherscanCompatibleSource implements TxHistorySource {
       throw new SourceError(`${this.name}: ${msg}`, /rate limit|max calls/i.test(String(msg)))
     }
     if (!Array.isArray(json.result)) return []
-    return json.result.map((t) => ({ hash: t.hash, timeStamp: parseInt(t.timeStamp, 10) }))
+    return json.result.map((t) => ({
+      hash: t.hash,
+      timeStamp: parseInt(t.timeStamp, 10),
+      from: t.from?.toLowerCase(),
+      // Contract creation rows carry an empty `to`; keep that empty string
+      // rather than dropping the field, so callers can distinguish "no
+      // recipient" from "unknown recipient" (undefined).
+      to: t.to !== undefined ? t.to.toLowerCase() : undefined,
+      valueWei: t.value,
+    }))
   }
 
   async getFirstTransactionTimestamp(address: string, chainId: number): Promise<number | null> {

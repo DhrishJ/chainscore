@@ -21,7 +21,13 @@ const NETWORK_BY_CHAIN: Record<number, string> = {
 }
 
 interface TransfersPage {
-  transfers: Array<{ hash: string; metadata?: { blockTimestamp?: string } }>
+  transfers: Array<{
+    hash: string
+    from?: string
+    to?: string | null
+    value?: number | null
+    metadata?: { blockTimestamp?: string }
+  }>
   pageKey?: string
 }
 
@@ -63,9 +69,23 @@ export class AlchemyTransfersSource implements TxHistorySource {
     return json.result ?? { transfers: [] }
   }
 
-  private static toRecord(t: { hash: string; metadata?: { blockTimestamp?: string } }): TxRecord {
+  private static toRecord(t: {
+    hash: string
+    from?: string
+    to?: string | null
+    value?: number | null
+    metadata?: { blockTimestamp?: string }
+  }): TxRecord {
     const iso = t.metadata?.blockTimestamp
-    return { hash: t.hash, timeStamp: iso ? Math.floor(Date.parse(iso) / 1000) : NaN }
+    return {
+      hash: t.hash,
+      timeStamp: iso ? Math.floor(Date.parse(iso) / 1000) : NaN,
+      from: t.from?.toLowerCase(),
+      // Contract creation transfers report `to: null`; normalize to '' so
+      // callers see the same "no recipient" shape as the etherscan adapter.
+      to: t.to === null ? '' : t.to?.toLowerCase(),
+      valueEth: typeof t.value === 'number' ? t.value : undefined,
+    }
   }
 
   async getFirstTransactionTimestamp(address: string, chainId: number): Promise<number | null> {
