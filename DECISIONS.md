@@ -3,6 +3,33 @@
 Running log of assumptions and decisions made during the rebuild. Newest first.
 Each entry: date, decision, reasoning, alternatives rejected.
 
+## 2026-07-02: Phase 3 (Workstream D + F)
+
+**D-017. Detector penalty is applied downstream, never inside the model.**
+Manipulation signals fold into a 0..1 penalty that lowers a score toward the
+floor (applyIntegrityPenalty), applied after the model prediction. The model
+artifact and its calibration stay untouched, so the model remains reproducible
+and the penalty is auditable and reversible. A penalty never zeroes a score.
+
+**D-016. Merges require multiple corroborating signals; no single-signal merge.**
+The merge threshold (0.85) is set above the strongest single pairwise signal
+(bridge_hop 0.75), so at least two independent signals are needed to merge.
+This is the structural defense against A6 forced-merge defamation. Medium
+links (0.5 to 0.85) are surfaced to scoring as probabilities but never
+hard-applied.
+
+**D-015. Entity resolution runs on data ChainScore already fetches.**
+The resolver consumes enriched TxRecords (funding, transfers, timing) and
+cross-chain hints, not a new paid data source. Bridge tracing uses claimed
+bridge destinations rather than deep bridge-contract decoding, which is a
+Workstream E enrichment if precision proves insufficient.
+
+**D-014. Detectors lean toward under-flagging.**
+A false manipulation flag on an honest wallet defames it, so thresholds are
+conservative and detectors express uncertainty through graded severity rather
+than a hair-trigger boolean. The honest-wallet fixture must stay unflagged in
+tests as a regression guard.
+
 ## 2026-07-02: Phase 1 (Workstream B + G basics)
 
 **D-013. IP rate limiting is per-instance best effort until a durable store exists.**
