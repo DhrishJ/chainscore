@@ -157,6 +157,50 @@ model BacktestRun {
   createdAt         DateTime @default(now())
 }
 
+// Resolved entity clusters (Workstream D). A cluster groups addresses judged
+// to be one actor above the merge confidence threshold. Merges are reversible:
+// reversedAt plus the retained links and cohesion are the audit trail, so a
+// wrong merge can be undone and explained.
+model Entity {
+  id          String             @id @default(cuid())
+  cohesion    Float
+  memberCount Int
+  createdAt   DateTime           @default(now())
+  reversedAt  DateTime?
+  reversedBy  String?
+  members     EntityMembership[]
+  audits      MergeAudit[]
+}
+
+model EntityMembership {
+  id         String   @id @default(cuid())
+  entityId   String
+  address    String
+  chain      String
+  // Confidence with which this address was attached to the entity.
+  confidence Float
+  addedAt    DateTime @default(now())
+  removedAt  DateTime?
+  entity     Entity   @relation(fields: [entityId], references: [id])
+
+  @@unique([entityId, address, chain])
+  @@index([address])
+}
+
+// Append-only log of every merge and reversal, with the signals that drove
+// the decision, so any entity association is explainable after the fact.
+model MergeAudit {
+  id        String   @id @default(cuid())
+  entityId  String
+  action    String   // 'merge' | 'reverse'
+  addressA  String
+  addressB  String
+  confidence Float
+  signals   Json
+  createdAt DateTime @default(now())
+  entity    Entity   @relation(fields: [entityId], references: [id])
+}
+
 // Server-issued, single-use, expiring nonces for authenticated write actions.
 // A signature is only accepted over a message the server itself issued and
 // bound to (address, action), which closes the replay hole where any captured
