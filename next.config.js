@@ -27,14 +27,20 @@
 
 const reporting = ['report-uri /api/csp-report']
 
+// fonts.googleapis.com / fonts.gstatic.com: @solana/wallet-adapter-react-ui's
+// styles.css @imports DM Sans from Google Fonts. Blocking that @import makes
+// the parent webpack CSS chunk fire onerror, which surfaces as a
+// ChunkLoadError that crashes the whole client app (found by the e2e suite
+// when enforcement first landed). The app's own fonts are self-hosted via
+// next/font; these two hosts exist solely for that third-party stylesheet.
 const enforcedBase = [
   "default-src 'self'",
   "base-uri 'self'",
   "object-src 'none'",
   "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
-  "style-src 'self' 'unsafe-inline'",
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   "img-src 'self' data: blob: https:",
-  "font-src 'self' data:",
+  "font-src 'self' data: https://fonts.gstatic.com",
   "connect-src 'self' https: wss:",
   "frame-src 'self' https:",
   "worker-src 'self' blob:",
@@ -73,9 +79,9 @@ const candidateBase = [
   "base-uri 'self'",
   "object-src 'none'",
   "script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'",
-  "style-src 'self' 'unsafe-inline'",
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   "img-src 'self' data: blob: https:",
-  "font-src 'self' data:",
+  "font-src 'self' data: https://fonts.gstatic.com",
   `connect-src ${candidateConnect}`,
   "frame-src 'self' https://verify.walletconnect.com https://verify.walletconnect.org",
   "worker-src 'self' blob:",
