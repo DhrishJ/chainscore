@@ -24,17 +24,37 @@ function isExpensiveRoute(pathname: string): boolean {
   return pathname.startsWith('/api/score') || pathname.startsWith('/api/og')
 }
 
+// Authenticated partner routes. Limited per API key (by bearer token) rather
+// than per IP so a key cannot multiply its budget across many IPs. The exact
+// per-key ceiling stored on ApiKey.rateLimitPerMin is enforced in the route;
+// this middleware bucket is a coarse abuse cap. A durable, key-specific
+// limiter needs a shared store (DECISIONS.md D-013).
+const v1Limiter = createRateLimiter({ windowMs: 60_000, max: 120 })
+
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
   const ip = resolveIp(request)
-  const bucket = isExpensiveRoute(pathname)
-    ? 'expensive'
-    : pathname.startsWith('/api/solana-rpc')
-      ? 'rpc'
-      : 'default'
+
+  const isV1 = pathname.startsWith('/api/v1')
+  const bucket = isV1
+    ? 'v1'
+    : isExpensiveRoute(pathname)
+      ? 'expensive'
+      : pathname.startsWith('/api/solana-rpc')
+        ? 'rpc'
+        : 'default'
   const limiter =
-    bucket === 'expensive' ? expensiveLimiter : bucket === 'rpc' ? rpcLimiter : defaultLimiter
-  const key = `${bucket}:${ip}`
+    bucket === 'v1'
+      ? v1Limiter
+      : bucket === 'expensive'
+        ? expensiveLimiter
+        : bucket === 'rpc'
+          ? rpcLimiter
+          : defaultLimiter
+
+  // For v1, key on the bearer token if present so limiting follows the key.
+  const bearer = request.headers.get('authorization')?.replace(/^Bearer\s+/i, '').slice(0, 24)
+  const key = isV1 && bearer ? `v1:key:${bearer}` : `${bucket}:${ip}`
 
   const result = limiter.limit(key)
 

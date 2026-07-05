@@ -185,5 +185,9 @@ export async function GET(
   result.dataCompleteness = completeness.dataCompleteness
   result.degradedSources = completeness.degradedSources
   recentScores.add({ address: evmAddress, score: result.score, timestamp: Date.now() })
-  return NextResponse.json(result)
+  // This unversioned endpoint is the legacy web-client contract. Partners
+  // should migrate to the authenticated /api/v1/score envelope.
+  return NextResponse.json(result, {
+    headers: { Deprecation: 'true', Link: '</api/v1/score>; rel="successor-version"' },
+  })
 }

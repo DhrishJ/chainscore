@@ -157,6 +157,34 @@ model BacktestRun {
   createdAt         DateTime @default(now())
 }
 
+// Partner API keys (Workstream E). Only the SHA-256 hash is stored; the
+// plaintext is shown once at creation and never persisted.
+model ApiKey {
+  id              String    @id
+  name            String
+  keyHash         String    @unique
+  rateLimitPerMin Int       @default(60)
+  createdAt       DateTime  @default(now())
+  lastUsedAt      DateTime?
+  revokedAt       DateTime?
+  webhooks        WebhookSubscription[]
+}
+
+// Score-change webhook subscriptions (Workstream E).
+model WebhookSubscription {
+  id        String    @id @default(cuid())
+  apiKeyId  String
+  address   String
+  chain     String
+  url       String
+  secret    String
+  createdAt DateTime  @default(now())
+  revokedAt DateTime?
+  apiKey    ApiKey    @relation(fields: [apiKeyId], references: [id])
+
+  @@index([address, chain])
+}
+
 // Resolved entity clusters (Workstream D). A cluster groups addresses judged
 // to be one actor above the merge confidence threshold. Merges are reversible:
 // reversedAt plus the retained links and cohesion are the audit trail, so a
