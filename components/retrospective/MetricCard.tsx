@@ -11,13 +11,11 @@ export function MetricCard({ label, value, description }: MetricCardProps) {
     <div className="rounded-2xl bg-card border border-border p-5 flex flex-col gap-2">
       <div className="flex items-center gap-1.5">
         <span className="text-xs uppercase tracking-widest text-muted">{label}</span>
-        <span
-          tabIndex={0}
-          title={description}
-          aria-label={description}
-          className="text-muted hover:text-text focus:text-text transition-colors cursor-help"
-        >
-          <Info size={13} aria-hidden="true" />
+        {/* Decorative: the same description is shown in full as visible text
+            below, so the icon carries no extra meaning for screen readers.
+            aria-label on a plain span is prohibited (axe aria-prohibited-attr). */}
+        <span className="text-muted" aria-hidden="true">
+          <Info size={13} />
         </span>
       </div>
       <span className="text-3xl font-bold font-grotesk text-text">{value}</span>
