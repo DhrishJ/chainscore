@@ -3,6 +3,33 @@
 Running log of assumptions and decisions made during the rebuild. Newest first.
 Each entry: date, decision, reasoning, alternatives rejected.
 
+## 2026-07-04: Phase 4 (Workstream E)
+
+**D-021. Live integrity wiring covers 2 of 4 detectors; the other 2 need data the fan-out does not yet retain.**
+scoreEvmWallet runs wash-trading and burst-timing on the tx records already
+fetched (zero extra provider cost). Instant-repay needs lending events with
+block numbers and Sybil needs entity data; the live fan-out does not retain
+either, so those detectors receive no input and contribute zero. This is a
+real partial integration, documented, not a stub. Richer lending-event
+capture is a follow-on enrichment.
+
+**D-020. v1 is EVM only; Solana returns 501.**
+The envelope integrity path is EVM-only (the Solana scorer is a separate
+heuristic). Rather than return a different shape under the same schema, v1
+fails Solana explicitly with 501 until a Solana envelope is designed.
+
+**D-019. Per-key rate limiting is coarse at the edge, exact ceiling deferred.**
+Middleware keys the v1 bucket on the bearer token so a key cannot multiply
+its budget across IPs, but it applies a fixed ceiling because Prisma is not
+edge-compatible and the per-key ApiKey.rateLimitPerMin lives in the DB. Exact
+per-key enforcement needs the shared store from D-013.
+
+**D-018. Score cache is per-instance, like the rate limiter.**
+Same tradeoff and same planned upgrade (shared Redis/Upstash). The cache
+never invents a score: fresh served direct, stale served flagged with its
+original as_of, last-known-good only under degradation. Latency measured on
+the service-controlled path (compose + cache), excluding provider network.
+
 ## 2026-07-02: Phase 3 (Workstream D + F)
 
 **D-017. Detector penalty is applied downstream, never inside the model.**
