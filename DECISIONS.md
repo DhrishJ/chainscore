@@ -5,6 +5,28 @@ Each entry: date, decision, reasoning, alternatives rejected.
 
 ## 2026-07-05: Phase 6 (hardening)
 
+**D-030. CSP enforcement ships as a two-header ratchet, not a one-shot
+strict policy (supersedes the sequencing half of D-027).**
+D-027 wanted a live violation stream before enforcing anything; the owner
+asked for enforcement the same day the site went live, before any organic
+traffic existed. The compromise: enforce the broad policy that had been
+report-only (blocks foreign scripts/styles/fonts, object embeds, form
+hijack; keeps unsafe-eval and connect-src https:/wss: because wallet SDKs
+need eval today and roam across RPC hosts), and simultaneously ship the
+next ratchet step as the new report-only candidate (wasm-unsafe-eval
+instead of unsafe-eval, connect-src enumerated to the hosts the client
+stack is actually built against: default viem RPCs for the five configured
+chains, WalletConnect, Coinbase Wallet). A /api/csp-report collector turns
+the report stream into greppable [csp-report] log lines, so ratchet
+decisions stop depending on someone watching a browser console. Also fixed
+in the same change: /embed/:address was unframeable by third parties
+(X-Frame-Options: SAMEORIGIN + frame-ancestors 'self' on the catch-all),
+which defeated the point of an embeddable widget; that route now overrides
+with frame-ancestors * and the ALLOWALL sentinel. Nonce-based script-src
+was rejected for now: it requires switching every page to dynamic
+rendering, which is a performance regression the current threat model does
+not justify.
+
 **D-029. The v1 partner API deliberately sends no CORS headers.**
 /api/v1 is a server-to-server API authenticated with bearer keys. Without
 Access-Control-Allow-Origin headers, browsers refuse cross-origin reads by
