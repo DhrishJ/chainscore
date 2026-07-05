@@ -5,6 +5,22 @@ Each entry: date, decision, reasoning, alternatives rejected.
 
 ## 2026-07-05: Phase 6 (hardening)
 
+**D-031. Durable rate limiting via Upstash Redis REST, fixed-window,
+fail-open (resolves the store half of D-013; D-019 stays open).**
+The middleware limiter becomes a shared quota across all serverless/edge
+instances when Upstash REST credentials are present (KV_* names from the
+Vercel Marketplace integration or UPSTASH_* from a hand-created database),
+and falls back to the per-instance in-memory limiter when they are absent,
+so nothing regresses in dev or CI. Fixed window (one pipelined INCR+PEXPIRE
+round trip per request) was chosen over sliding window: worst case admits
+2x the budget at a window boundary, which is fine for abuse damping and
+half the Redis cost. Fail-open on any Redis error or a 1s timeout: the
+limiter protects the app, it must never become the reason the app is down.
+The raw REST API is used instead of @upstash/redis or @upstash/ratelimit
+to keep the edge bundle dependency-free. D-019 (exact per-key ceilings
+from ApiKey.rateLimitPerMin inside middleware) remains open: it needs the
+per-key limits mirrored into Redis, not just a shared counter.
+
 **D-030. CSP enforcement ships as a two-header ratchet, not a one-shot
 strict policy (supersedes the sequencing half of D-027).**
 D-027 wanted a live violation stream before enforcing anything; the owner

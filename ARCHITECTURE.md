@@ -325,7 +325,8 @@ section describes the system after the phased rebuild (branch
 
 ## Still open (tracked in DECISIONS.md and DEPLOYMENT.md)
 
-Durable shared store for cache and rate limits (D-013/D-018), exact per-key
-limits (D-019), and the next CSP ratchet step: promoting the report-only
-candidate (wasm-unsafe-eval, enumerated connect-src) into the enforced header
-once the [csp-report] log stream from real wallet flows is quiet (D-030).
+Durable score cache (D-018; rate limits are durable via Upstash since D-031),
+exact per-key limits (D-019), and the next CSP ratchet step: promoting the
+report-only candidate (wasm-unsafe-eval, enumerated connect-src) into the
+enforced header once the [csp-report] log stream from real wallet flows is
+quiet (D-030).

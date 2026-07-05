@@ -92,13 +92,14 @@ for.
 
 ## Known follow-ups still open (not blockers, but tracked)
 
-- **Durable rate-limit and cache store (`DECISIONS.md` D-013 / D-018).** The
-  IP rate limiter (`middleware.ts`) and the score cache
-  (`lib/scoring/cache.ts`) both keep state in per-instance memory. On Vercel
-  each serverless instance counts independently, so the effective ceiling is
-  `instances x limit`, and a cached/stale envelope on one instance is
-  invisible to another. Fixing this needs a shared store (Upstash Redis or
-  similar), which is a new paid service and an owner decision.
+- **Durable rate limiting is wired; the score cache is still per-instance
+  (`DECISIONS.md` D-031 / D-018).** The middleware limiter uses Upstash
+  Redis (fixed-window, fail-open) whenever `KV_REST_API_URL`/`TOKEN` or
+  `UPSTASH_REDIS_REST_URL`/`TOKEN` are set, and falls back to per-instance
+  memory otherwise. The score cache (`lib/scoring/cache.ts`) still keeps
+  state per instance: a cached/stale envelope on one instance is invisible
+  to another. Moving the cache to the same Redis is a follow-up once cache
+  hit rates justify the extra round trip.
 - **Per-key exact rate limits (`DECISIONS.md` D-019).** The v1 middleware
   buckets by bearer token so a key can't multiply its budget across IPs, but
   it applies one fixed ceiling for everyone because the per-key
