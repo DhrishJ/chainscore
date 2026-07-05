@@ -3,6 +3,30 @@
 Running log of assumptions and decisions made during the rebuild. Newest first.
 Each entry: date, decision, reasoning, alternatives rejected.
 
+## 2026-07-05: Phase 6 (hardening)
+
+**D-027. CSP ships report-only before enforced.**
+A web3 frontend loads wallet SDKs using eval and wasm, RainbowKit inline
+styles, and RPC/WebSocket connections to many hosts. A strict enforced CSP
+cannot be written safely without observing real violations against live wallet
+flows, which need the deployed app. Report-only establishes the policy and
+surfaces violations in the console breaking nothing; enforcement (drop
+unsafe-eval, add nonces, tighten connect-src) follows once the stream is clean.
+
+**D-026. Dependency-audit gate stays report-only through this pass.**
+The Solana wallet-adapter tree still carries the bulk of the audit findings.
+The perf work isolated it to the marketplace route but did not slim it
+(replacing @solana/wallet-adapter-wallets with specific adapters is a behavior
+change, and the near-full local disk makes dependency surgery risky to verify
+now). Flipping npm audit / osv to gating is deferred until the tree is slimmed;
+CI keeps reporting them.
+
+**D-025. Disk exhaustion on the dev machine, not a code problem.**
+The C: drive sits near 100 percent, causing non-deterministic ENOSPC build
+failures locally. tsc, lint, and the unit suite (disk-light) are the local
+gates; the authoritative build and e2e/a11y verification run in CI on a clean
+machine. The owner should free disk space.
+
 ## 2026-07-05: Phase 5 (Workstream A, first increment)
 
 **D-024. Local Lighthouse lab numbers are not a credible before/after here.**
