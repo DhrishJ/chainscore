@@ -25,6 +25,14 @@ const schema = z.object({
   // (doubles provider load for sampled reads; leave off in production
   // until budgets are sized).
   INGEST_RECONCILE: z.string().optional(),
+  // Optional: Upstash Redis REST credentials for the durable rate limiter
+  // (D-013). The Vercel Marketplace integration injects the KV_* names; a
+  // hand-created Upstash database uses the UPSTASH_* names. Either pair
+  // works; absent both, rate limiting stays per-instance in-memory.
+  UPSTASH_REDIS_REST_URL: z.string().optional(),
+  UPSTASH_REDIS_REST_TOKEN: z.string().optional(),
+  KV_REST_API_URL: z.string().optional(),
+  KV_REST_API_TOKEN: z.string().optional(),
 })
 
 const parsed = schema.safeParse(process.env)
