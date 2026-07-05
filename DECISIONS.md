@@ -5,6 +5,30 @@ Each entry: date, decision, reasoning, alternatives rejected.
 
 ## 2026-07-05: Phase 6 (hardening)
 
+**D-029. The v1 partner API deliberately sends no CORS headers.**
+/api/v1 is a server-to-server API authenticated with bearer keys. Without
+Access-Control-Allow-Origin headers, browsers refuse cross-origin reads by
+default, which is exactly the posture we want: a partner cannot casually embed
+their secret API key in front-end JavaScript and have it appear to work. An
+explicit OPTIONS/deny handler was rejected as ceremony (the browser outcome is
+identical); an allowlist was rejected because no browser-based partner use
+case exists, and adding one later is additive. Documented in docs/API.md.
+
+**D-028. npm audit now gates CI on critical findings (supersedes the
+report-only half of D-005 and the deferral in D-026).**
+The precondition both earlier decisions named is now met: the
+@solana/wallet-adapter-wallets meta-package (about 40 wallet SDKs, most of the
+vulnerable surface) was replaced with the two standalone adapters the UI
+actually renders (Phantom, Solflare), and non-breaking `npm audit fix` was
+applied. Audit went from 138 findings (2 critical / 21 high) to 54
+(0 critical / 5 high). The gate is critical-only because every remaining high
+requires a breaking upgrade: next itself (fix is Next 16), glob via dev-only
+eslint-config-next, and ws under @solana-mobile inside wallet-adapter-react.
+The disk-space risk D-026 cited is also gone (37 GB free at execution time);
+the swap was verified with tsc, lint, 218 unit tests, and a production build
+plus client-bundle secret scan. osv-scanner stays report-only for now since it
+has no severity threshold flag in the action.
+
 **D-027. CSP ships report-only before enforced.**
 A web3 frontend loads wallet SDKs using eval and wasm, RainbowKit inline
 styles, and RPC/WebSocket connections to many hosts. A strict enforced CSP

@@ -312,9 +312,9 @@ section describes the system after the phased rebuild (branch
 | 6.2 Helius key in client bundle (HIGH) | Fixed in code: server-side `/api/solana-rpc` proxy; key still needs rotation (owner) |
 | 6.3 No rate limiting (HIGH) | Fixed: IP + per-key limits in `middleware.ts` (per-instance; durable store pending, D-013) |
 | 6.4 Supabase RLS unknown (HIGH) | Open: the project no longer resolves; re-assess on the new database |
-| 6.5 No security headers / CORS (MODERATE) | Fixed: headers set; CSP report-only; strict partner CORS still to add with enforcement |
+| 6.5 No security headers / CORS (MODERATE) | Fixed: headers set; CSP report-only; v1 API sends no CORS headers by design (deny-all for browsers, D-029) |
 | 6.6 Weak input validation (MODERATE) | Fixed: zod at every route boundary (`lib/validation.ts`) |
-| 6.7 Dependency vulnerabilities (MODERATE) | Partly addressed: audit + osv in CI (report-only, D-005); Solana tree isolated but not yet slimmed |
+| 6.7 Dependency vulnerabilities (MODERATE) | Fixed: Solana tree slimmed to Phantom+Solflare, 0 critical findings, npm audit gates CI on critical (D-028); remaining highs need breaking upgrades |
 | 6.8 Env hygiene (MODERATE) | Fixed: single zod-validated read point |
 | 5.2 Money as Float | Open: marketplace is inert; convert to Decimal if it activates |
 | 5.3 Dead write path (scoreSync unused) | Open: needs the database to populate Wallet/ScoreSnapshot |
@@ -326,6 +326,6 @@ section describes the system after the phased rebuild (branch
 ## Still open (tracked in DECISIONS.md and DEPLOYMENT.md)
 
 Durable shared store for cache and rate limits (D-013/D-018), exact per-key
-limits (D-019), CSP enforcement, dependency-audit gating (D-005), Solana
-wallet-adapter tree slimming, and the owner-side deploy blockers (new database,
+limits (D-019), CSP enforcement once a live deploy exists to observe the
+report-only stream (D-027), and the owner-side deploy blockers (new database,
 Helius rotation, Scroll on Alchemy).

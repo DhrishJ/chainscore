@@ -19,6 +19,12 @@ Keys are shown once at creation. A missing or malformed header returns
 the `X-RateLimit-Remaining` response header, and on a `429` respect the
 `Retry-After` header (seconds) before retrying.
 
+Call the API from your servers, not from browser JavaScript. The API sends no
+CORS headers on purpose (DECISIONS.md D-029), so cross-origin browser requests
+are blocked by the browser itself; embedding your secret key in front-end code
+would expose it to anyone who views source. For a browser surface, use the
+public embed widget (`/embed/{address}`) instead.
+
 ## GET /api/v1/score/{address}
 
 Returns the versioned scoring envelope for a wallet: score, grade,

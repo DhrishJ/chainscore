@@ -33,8 +33,7 @@ serves it.
 
 ```bash
 npm install
-# create .env.local with the variables from the table below (there is no
-# .env.local.example checked in yet)
+cp .env.local.example .env.local   # then fill in real values
 npx prisma generate
 npx prisma db push
 npm run dev

@@ -77,13 +77,16 @@ jobs:
       - name: Install (lockfile enforced)
         run: npm ci --ignore-scripts
 
-      # Report-only until the Solana wallet-adapter tree is replaced or
-      # upgraded (DECISIONS.md D-005): the baseline has 2 critical / 21 high
-      # findings there, and gating today would leave CI permanently red.
-      # Flip to a hard gate in the Phase 6 hardening pass.
-      - name: npm audit (report only, see DECISIONS.md D-005)
-        run: npm audit || true
-        continue-on-error: true
+      # Gates on critical findings only (DECISIONS.md D-028). The wallet tree
+      # was slimmed to the two adapters actually used, dropping the audit from
+      # 138 findings (2 critical / 21 high) to 54 (0 critical / 5 high); the
+      # remaining highs sit in next itself, dev-only eslint-config-next glob,
+      # and ws under the Solana mobile protocol, all of which need breaking
+      # upgrades. The full report still prints for visibility.
+      - name: npm audit (report full, gate on critical, D-028)
+        run: |
+          npm audit || true
+          npm audit --audit-level=critical
 
       - name: osv-scanner (report only, see DECISIONS.md D-005)
         uses: google/osv-scanner-action/osv-scanner-action@v2.2.4
