@@ -8,8 +8,10 @@ import { env } from '@/lib/env.server'
 // below becomes a durable shared quota across all serverless/edge instances
 // (D-013). Without them, the per-instance in-memory limiter still applies as
 // best-effort abuse damping.
-const upstashUrl = env.UPSTASH_REDIS_REST_URL ?? env.KV_REST_API_URL
-const upstashToken = env.UPSTASH_REDIS_REST_TOKEN ?? env.KV_REST_API_TOKEN
+const upstashUrl =
+  env.UPSTASH_REDIS_REST_URL ?? env.KV_REST_API_URL ?? env.Chainscore_KV_REST_API_URL
+const upstashToken =
+  env.UPSTASH_REDIS_REST_TOKEN ?? env.KV_REST_API_TOKEN ?? env.Chainscore_KV_REST_API_TOKEN
 const durableConfig =
   upstashUrl && upstashToken ? { restUrl: upstashUrl, restToken: upstashToken } : null
 
