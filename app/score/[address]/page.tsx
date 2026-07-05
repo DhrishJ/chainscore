@@ -430,6 +430,38 @@ export default async function ScorePage({ params, searchParams }: Props) {
                     grade={result.grade}
                   />
                 </div>
+
+                {/* Provenance: every displayed score names the model that
+                    produced it, when it was computed, and, when a data source
+                    was degraded, how complete the inputs were. Real values
+                    from the scoring result, never placeholders. */}
+                <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted justify-center sm:justify-start">
+                  {result.modelVersion && (
+                    <span title="The versioned model that produced this score">
+                      Model <span className="font-mono text-text">{result.modelVersion}</span>
+                    </span>
+                  )}
+                  <span aria-hidden="true">·</span>
+                  <span title="When this score was computed from onchain data">
+                    Scored {new Date(result.timestamp).toISOString().replace('T', ' ').slice(0, 16)} UTC
+                  </span>
+                  {typeof result.calibratedPD === 'number' && (
+                    <>
+                      <span aria-hidden="true">·</span>
+                      <span title="Calibrated probability of default the score is derived from">
+                        PD {(result.calibratedPD * 100).toFixed(1)}%
+                      </span>
+                    </>
+                  )}
+                  {typeof result.dataCompleteness === 'number' && result.dataCompleteness < 1 && (
+                    <>
+                      <span aria-hidden="true">·</span>
+                      <span className="text-warning" title={`Some data sources were degraded: ${(result.degradedSources ?? []).join(', ') || 'unknown'}`}>
+                        {Math.round(result.dataCompleteness * 100)}% data completeness
+                      </span>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
           </div>
