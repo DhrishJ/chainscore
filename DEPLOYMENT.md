@@ -105,12 +105,13 @@ for.
   `ApiKey.rateLimitPerMin` value lives in Prisma, which isn't edge-compatible
   inside middleware. Exact per-key enforcement needs the same shared store as
   D-013.
-- **CSP enforcement.** The Content-Security-Policy is shipped
-  report-only (`Content-Security-Policy-Report-Only` in `next.config.js`)
-  because the wallet-connect stack (RainbowKit, Solana wallet adapters) uses
-  `eval`/wasm and opens RPC/WebSocket connections to many hosts; enforcement
-  (dropping `unsafe-eval`, adding nonces) needs a clean violation-report
-  window first.
+- **CSP ratchet, next step (`DECISIONS.md` D-030).** A broad
+  Content-Security-Policy is now enforced, and a stricter candidate
+  (`wasm-unsafe-eval` instead of `unsafe-eval`, enumerated `connect-src`)
+  ships report-only alongside it. Violations from real traffic appear as
+  `[csp-report]` lines in Vercel Runtime Logs via `/api/csp-report`. After a
+  representative window of wallet-connect traffic, search the logs: quiet
+  directives get promoted into the enforced header in `next.config.js`.
 - **Remaining dependency-audit highs need breaking upgrades (`DECISIONS.md`
   D-028).** The wallet tree was slimmed to the Phantom and Solflare adapters
   and `npm audit` now gates CI on critical findings (currently zero). The
