@@ -67,21 +67,32 @@ export async function getFirstTransaction(address: string, chainId = 1): Promise
   }
 }
 
-export async function getTransactionHistory(address: string, chainId = 1): Promise<TxHistoryResult> {
+export interface EnrichedTxHistory extends TxHistoryResult {
+  // The raw records the aggregates were computed from, newest first. Retained
+  // so integrity detectors (wash trading, burst timing) run on data already
+  // fetched, with no extra provider call.
+  records: TxRecord[]
+}
+
+export async function getEnrichedTransactionHistory(address: string, chainId = 1): Promise<EnrichedTxHistory> {
   try {
     const { value, source, attempts } = await withFailover(txHistorySourcesFor(chainId), (s) =>
       s.getTransactionList(address, chainId, TX_LIMIT)
     )
     if (attempts.some((a) => !a.ok)) {
-      console.warn(
-        JSON.stringify({ evt: 'ingest_failover', chainId, winner: source, attempts })
-      )
+      console.warn(JSON.stringify({ evt: 'ingest_failover', chainId, winner: source, attempts }))
     }
     void maybeReconcile(address, chainId, value.length, source)
-    return { ...aggregateHistory(value, Date.now() / 1000), source }
+    return { ...aggregateHistory(value, Date.now() / 1000), source, records: value }
   } catch (e) {
-    return { ...EMPTY_HISTORY, error: e instanceof Error ? e.message : String(e) }
+    return { ...EMPTY_HISTORY, error: e instanceof Error ? e.message : String(e), records: [] }
   }
+}
+
+export async function getTransactionHistory(address: string, chainId = 1): Promise<TxHistoryResult> {
+  const { records: _records, ...rest } = await getEnrichedTransactionHistory(address, chainId)
+  void _records
+  return rest
 }
 
 // Opt-in cross-source reconciliation (INGEST_RECONCILE=true): query the next
