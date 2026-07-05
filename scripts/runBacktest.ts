@@ -98,6 +98,9 @@ function main(): void {
   const base = path.join(outDir, `${report.modelVersion}-${stamp}`)
   fs.writeFileSync(`${base}.json`, JSON.stringify(report, null, 2))
   fs.writeFileSync(`${base}.md`, toMarkdown(report))
+  // Stable path the frontend retrospective reads, so the data story always
+  // reflects the latest reproducible run without hunting a timestamped file.
+  fs.writeFileSync(path.join(outDir, 'latest.json'), JSON.stringify(report, null, 2))
 
   console.log(`model ${report.modelVersion}: ROC-AUC ${fmt(report.metrics.rocAuc)}, PR-AUC ${fmt(report.metrics.prAuc)}, Brier ${fmt(report.metrics.brier)}, ECE ${fmt(report.metrics.ece)}`)
   console.log(`report written to ${base}.md`)

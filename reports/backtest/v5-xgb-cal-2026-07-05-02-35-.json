@@ -1,0 +1,154 @@
+{
+  "modelVersion": "v5-xgb-cal",
+  "generatedAt": "2026-07-05T02:35:22.082Z",
+  "nRows": 7720,
+  "positives": 1933,
+  "sampleBaseRate": 0.2503886010362694,
+  "targetBaseRate": 0.0909,
+  "metrics": {
+    "rocAuc": 0.8488894109574578,
+    "prAuc": 0.5993138835176384,
+    "brier": 0.05281268454013473,
+    "ece": 0.018079604715209547
+  },
+  "reliability": [
+    {
+      "lo": 0,
+      "hi": 0.1,
+      "meanPredicted": 0.025710729960412026,
+      "observedRate": 0.02768044824579483,
+      "weight": 5678.8985095083735,
+      "n": 4986
+    },
+    {
+      "lo": 0.1,
+      "hi": 0.2,
+      "meanPredicted": 0.1629057082198408,
+      "observedRate": 0.10433574102708126,
+      "weight": 873.3532608405401,
+      "n": 896
+    },
+    {
+      "lo": 0.2,
+      "hi": 0.3,
+      "meanPredicted": 0.24720643660813307,
+      "observedRate": 0.2122334751319428,
+      "weight": 538.8228417262544,
+      "n": 665
+    },
+    {
+      "lo": 0.3,
+      "hi": 0.4,
+      "meanPredicted": 0.3438501416150035,
+      "observedRate": 0.20599217737349806,
+      "weight": 252.01978620113806,
+      "n": 308
+    },
+    {
+      "lo": 0.4,
+      "hi": 0.5,
+      "meanPredicted": 0.4425650277996442,
+      "observedRate": 0.3255181115292083,
+      "weight": 88.10514362543148,
+      "n": 128
+    },
+    {
+      "lo": 0.5,
+      "hi": 0.6,
+      "meanPredicted": 0.5461667938528024,
+      "observedRate": 0.32814079116659245,
+      "weight": 34.29657900832188,
+      "n": 50
+    },
+    {
+      "lo": 0.6,
+      "hi": 0.7,
+      "meanPredicted": 0.6418413200562084,
+      "observedRate": 0.4376652829352522,
+      "weight": 10.783272581899725,
+      "n": 18
+    },
+    {
+      "lo": 0.7,
+      "hi": 0.8,
+      "meanPredicted": 0.7473377243697994,
+      "observedRate": 0.7822373280738228,
+      "weight": 5.569190056990395,
+      "n": 13
+    },
+    {
+      "lo": 0.8,
+      "hi": 0.9,
+      "meanPredicted": 0.8576036338168902,
+      "observedRate": 1,
+      "weight": 1.8151784790481118,
+      "n": 5
+    },
+    {
+      "lo": 0.9,
+      "hi": 1,
+      "meanPredicted": 0.9864397580577631,
+      "observedRate": 1,
+      "weight": 236.33623797206695,
+      "n": 651
+    }
+  ],
+  "operatingPoint": {
+    "threshold": 578,
+    "recall": 0.8815312984997398,
+    "falsePositiveRate": 0.4848799032313791,
+    "precision": 0.15382171634851102,
+    "flaggedShare": 0.5209355150612702,
+    "scoreCutoff": 578
+  },
+  "slices": {
+    "age<180d": {
+      "n": 5912,
+      "positives": 1584,
+      "rocAuc": 0.8393307351472268,
+      "prAuc": 0.61098623315719
+    },
+    "age>=180d": {
+      "n": 1808,
+      "positives": 349,
+      "rocAuc": 0.869924056002557,
+      "prAuc": 0.541475870636816
+    },
+    "borrows<=3": {
+      "n": 7348,
+      "positives": 1783,
+      "rocAuc": 0.849879288216238,
+      "prAuc": 0.6084217428166202
+    },
+    "borrows>3": {
+      "n": 372,
+      "positives": 150,
+      "rocAuc": 0.7373573573573591,
+      "prAuc": 0.3524536744026621
+    },
+    "chain=arbitrum": {
+      "n": 1000,
+      "positives": 416,
+      "rocAuc": 0.7686030525553136,
+      "prAuc": 0.4840331487601991
+    },
+    "chain=avalanche": {
+      "n": 147,
+      "positives": 52,
+      "rocAuc": 0.7921052631578964,
+      "prAuc": 0.4959840231732782
+    },
+    "chain=ethereum": {
+      "n": 3964,
+      "positives": 647,
+      "rocAuc": 0.8143454705490828,
+      "prAuc": 0.4117837296127776
+    },
+    "chain=scroll": {
+      "n": 2609,
+      "positives": 818,
+      "rocAuc": 0.874853416771433,
+      "prAuc": 0.7616131939328892
+    }
+  }
+}
