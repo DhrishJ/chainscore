@@ -3,6 +3,27 @@
 Running log of assumptions and decisions made during the rebuild. Newest first.
 Each entry: date, decision, reasoning, alternatives rejected.
 
+## 2026-07-05: Phase 5 (Workstream A, first increment)
+
+**D-024. Local Lighthouse lab numbers are not a credible before/after here.**
+Three home-page mobile runs on this loaded dev machine ranged perf 0.47 to
+0.52, LCP 6.9 to 9.6s, TBT 1040 to 1740ms. Too noisy to certify a CWV delta.
+The perf claim rests on the deterministic build instead (home First Load JS
+120 kB, Solana 123 kB chunk isolated to the marketplace route). Real CWV
+certification waits for the Vercel preview deploy, which is blocked on the DB.
+
+**D-023. Solana button loads on every page after hydration, not on interaction.**
+LazySolanaButton is in the global Navbar, so its dynamic chunk still fetches
+post-hydration on every page. This removes the adapter tree from First Load JS
+(the LCP win) but not from total main-thread work. Loading it only on user
+intent is a further optimization, deferred.
+
+**D-022. Everything on the retrospective traces to reports/backtest/latest.json.**
+The data story imports the reproducible backtest artifact; every number
+(recall 88%, FPR 48%, ROC 0.849, weakest chain computed at runtime) comes from
+it, honoring the no-fabricated-numbers rule. runBacktest writes latest.json as
+the stable source.
+
 ## 2026-07-04: Phase 4 (Workstream E)
 
 **D-021. Live integrity wiring covers 2 of 4 detectors; the other 2 need data the fan-out does not yet retain.**
