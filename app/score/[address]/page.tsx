@@ -6,6 +6,8 @@ import { mainnet } from 'viem/chains'
 import { ScoreGauge } from '@/components/ScoreGauge'
 import { ScoreCountUp } from '@/components/ScoreCountUp'
 import { FactorCard } from '@/components/FactorCard'
+import { RadarFactors } from '@/components/explain/RadarFactors'
+import { ContributionWaterfall } from '@/components/explain/ContributionWaterfall'
 import { ImprovementTips } from '@/components/ImprovementTips'
 import { ShareButton } from '@/components/ShareButton'
 import { WalletInput } from '@/components/WalletInput'
@@ -481,6 +483,13 @@ export default async function ScorePage({ params, searchParams }: Props) {
                 <FactorCard key={factor.name} factor={factor} />
               ))}
             </div>
+
+            {result.factors.length > 0 && !result.newWallet && !result.noBorrowHistory && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
+                <RadarFactors factors={result.factors} />
+                <ContributionWaterfall contributions={result.topContributions} />
+              </div>
+            )}
           </div>
 
           <ImprovementTips factors={result.factors} />
