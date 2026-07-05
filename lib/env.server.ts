@@ -26,13 +26,18 @@ const schema = z.object({
   // until budgets are sized).
   INGEST_RECONCILE: z.string().optional(),
   // Optional: Upstash Redis REST credentials for the durable rate limiter
-  // (D-013). The Vercel Marketplace integration injects the KV_* names; a
-  // hand-created Upstash database uses the UPSTASH_* names. Either pair
-  // works; absent both, rate limiting stays per-instance in-memory.
+  // (D-013). Three naming schemes, first match wins in middleware.ts:
+  // UPSTASH_* (hand-created database), KV_* (Vercel Marketplace default),
+  // Chainscore_KV_* (what the Marketplace actually injected for this
+  // project: the store was connected with a "Chainscore" env prefix, and
+  // marketplace-managed vars cannot be renamed). Absent all three pairs,
+  // rate limiting stays per-instance in-memory.
   UPSTASH_REDIS_REST_URL: z.string().optional(),
   UPSTASH_REDIS_REST_TOKEN: z.string().optional(),
   KV_REST_API_URL: z.string().optional(),
   KV_REST_API_TOKEN: z.string().optional(),
+  Chainscore_KV_REST_API_URL: z.string().optional(),
+  Chainscore_KV_REST_API_TOKEN: z.string().optional(),
 })
 
 const parsed = schema.safeParse(process.env)
