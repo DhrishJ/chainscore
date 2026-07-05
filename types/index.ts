@@ -33,6 +33,10 @@ export interface ScoreResult {
   // groups failed. Optional so the v1 contract stays backward compatible.
   dataCompleteness?: number
   degradedSources?: string[]
+  // Additive explainability (Workstream A). Top signed feature contributions
+  // to the score: impact > 0 raised the score (lowered risk), impact < 0
+  // lowered it. Real model attributions from the same prediction pass.
+  topContributions?: { label: string; impact: number }[]
 }
 
 export interface RawWalletData {
