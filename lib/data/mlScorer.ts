@@ -232,6 +232,12 @@ function buildFeatureVector(data: RawWalletData, walletAgeDays: number): number[
     data.hasStakedETH,
   ].filter(Boolean).length
 
+  // Behavioral risk ratios (Phase B), same definitions/clips as build_features.py.
+  const borrowVelocity = Math.min(totalBorrows / Math.max(walletAgeDays, 1), 50)
+  const liquidationRate = Math.min(priorLiqCount / Math.max(totalBorrows, 1), 10)
+  const netUnpaidBorrows = Math.min(Math.max(totalBorrows - totalRepays, 0), 1000)
+  const defiTenureRatio = Math.min((data.daysSinceFirstDefi ?? 0) / Math.max(walletAgeDays, 1), 1.5)
+
   return [
     walletAgeDays,
     walletAgeDays / 30,
@@ -263,6 +269,11 @@ function buildFeatureVector(data: RawWalletData, walletAgeDays: number): number[
     data.hasETH ? 1 : 0,
     data.hasENS ? 1 : 0,
     data.isGnosisSafe ? 1 : 0,
+    // Behavioral risk ratios (Phase B)
+    borrowVelocity,
+    liquidationRate,
+    netUnpaidBorrows,
+    defiTenureRatio,
   ]
 }
 
@@ -345,6 +356,102 @@ function buildModelFactors(data: RawWalletData, contribs: number[]): Factor[] {
 }
 
 // ─────────────────────────────────────────────────────────────
+// Vector scoring (Workstream C, additive)
+// Scores directly from an ordered feature vector in model/schema.json
+// order. The backtest engine uses this so backtests exercise the exact
+// serving path (same trees, same calibration, same band). The live
+// computeScore path below is untouched.
+// ─────────────────────────────────────────────────────────────
+
+export interface VectorPrediction {
+  pd: number
+  score: number
+  marginLiq: number
+  modelVersion: string
+}
+
+export function predictFromFeatureVector(features: number[]): VectorPrediction | null {
+  loadModel()
+  if (!(xgbModel || lrModel) || !meta) return null
+  const pred = xgbModel ? predictXGB(features) : predictLR(features)
+  const pd = calibratePD(sigmoid(pred.marginLiq))
+  return { pd, score: pdToScore(pd), marginLiq: pred.marginLiq, modelVersion: meta.model_version }
+}
+
+export function servingModelMeta(): { modelVersion: string; featureNames: string[]; gradeCutoffs: Record<string, number> } | null {
+  loadModel()
+  if (!meta) return null
+  return {
+    modelVersion: meta.model_version,
+    featureNames: meta.feature_names,
+    gradeCutoffs: meta.grade_cutoffs,
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// Top feature contributions (Workstream A explainability)
+// Turns the same per-feature path decomposition the factor bars use into a
+// signed, human-labeled list. impact > 0 means the feature pushed the score
+// UP (lowered liquidation risk); impact < 0 pushed it DOWN. Real model
+// attributions, not fabricated. Additive to the ScoreResult contract.
+// ─────────────────────────────────────────────────────────────
+
+const FEATURE_LABELS: Record<string, string> = {
+  wallet_age_days: 'Wallet age',
+  wallet_age_months: 'Wallet age',
+  days_since_first_defi: 'DeFi tenure',
+  active_days_count: 'Active days',
+  tx_count: 'Transaction count',
+  tx_count_30d: 'Recent activity (30d)',
+  tx_count_90d: 'Recent activity (90d)',
+  tx_count_180d: 'Recent activity (180d)',
+  active_months_12: 'Active months (12m)',
+  aave_borrows: 'Aave borrows',
+  aave_repays: 'Aave repayments',
+  aave_liquidations_prior: 'Prior Aave liquidations',
+  compound_borrows: 'Compound borrows',
+  compound_repays: 'Compound repayments',
+  compound_liquidations_prior: 'Prior Compound liquidations',
+  total_borrows: 'Total borrows',
+  total_repays: 'Total repayments',
+  repayment_ratio: 'Repayment ratio',
+  prior_liquidation_count: 'Prior liquidations',
+  has_prior_liquidation: 'Has been liquidated',
+  protocols_used_count: 'Protocol breadth',
+  has_uniswap_lp: 'Uniswap LP',
+  has_staked_eth: 'Staked ETH',
+  has_governance_vote: 'Governance participation',
+  total_portfolio_usd: 'Portfolio value',
+  stablecoin_pct: 'Stablecoin allocation',
+  token_diversity: 'Token diversity',
+  has_eth: 'Holds ETH',
+  has_ens: 'ENS name',
+  is_gnosis_safe: 'Gnosis Safe multisig',
+  borrow_velocity: 'Borrow velocity',
+  liquidation_rate: 'Liquidation rate',
+  net_unpaid_borrows: 'Unpaid borrows',
+  defi_tenure_ratio: 'DeFi tenure ratio',
+}
+
+function buildTopContributions(contribs: number[], limit = 3): ScoreResult['topContributions'] {
+  const names = meta!.feature_names
+  // impact is the push toward a HIGHER score, so negate the contribution to
+  // liquidation risk. Collapse duplicate labels (e.g. the two wallet-age
+  // features) by keeping the strongest.
+  const byLabel = new Map<string, number>()
+  contribs.forEach((c, i) => {
+    const label = FEATURE_LABELS[names[i]] ?? names[i]
+    const impact = -c
+    const prev = byLabel.get(label)
+    if (prev === undefined || Math.abs(impact) > Math.abs(prev)) byLabel.set(label, impact)
+  })
+  const all = [...byLabel.entries()].map(([label, impact]) => ({ label, impact }))
+  const positive = all.filter((x) => x.impact > 0).sort((a, b) => b.impact - a.impact).slice(0, limit)
+  const negative = all.filter((x) => x.impact < 0).sort((a, b) => a.impact - b.impact).slice(0, limit)
+  return [...positive, ...negative]
+}
+
+// ─────────────────────────────────────────────────────────────
 // Main export
 // ─────────────────────────────────────────────────────────────
 
@@ -391,6 +498,7 @@ export function computeScore(data: RawWalletData): ScoreResult {
       factors, walletAge: walletAgeDays, totalTxns: data.txCount,
       protocolsUsed: data.protocolsUsed, timestamp: Date.now(),
       newWallet: false, calibratedPD: pd, modelVersion: meta.model_version,
+      topContributions: buildTopContributions(pred.contribs),
     }
   }
 

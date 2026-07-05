@@ -105,6 +105,146 @@ model Review {
   reviewee        Wallet   @relation("ReviewsReceived", fields: [revieweeAddress], references: [address])
 }
 
+// Point-in-time feature store (Workstream C). Every row is stamped with the
+// moment its data was valid; nothing may ever be read for an as_of earlier
+// than validAtTs. Scores logged against a snapshot are reproducible:
+// (features, featureSetVersion, modelVersion) fully determine the score.
+model FeatureSnapshot {
+  id                String   @id @default(cuid())
+  address           String
+  chain             String
+  // Unix seconds; the newest data observable inside this vector.
+  validAtTs         Int
+  featureSetVersion String
+  // Ordered feature vector in ml/feature_schema.json order.
+  features          Json
+  dataCompleteness  Float    @default(1)
+  createdAt         DateTime @default(now())
+
+  @@unique([address, chain, validAtTs, featureSetVersion])
+  @@index([address, chain])
+}
+
+// Realized outcomes per (wallet, chain) for a documented criteria version.
+// See LABELS.md; criteriaVersion changes whenever the definition does.
+model OutcomeLabel {
+  id              String   @id @default(cuid())
+  address         String
+  chain           String
+  // Outcome window [windowStartTs, windowEndTs), unix seconds.
+  windowStartTs   Int
+  windowEndTs     Int
+  label           Int
+  criteriaVersion String
+  createdAt       DateTime @default(now())
+
+  @@unique([address, chain, windowStartTs, criteriaVersion])
+  @@index([address, chain])
+}
+
+// One row per reproducible backtest run; the artifact lives in
+// reports/backtest/ and metrics are denormalized here for querying.
+model BacktestRun {
+  id                String   @id @default(cuid())
+  modelVersion      String
+  featureSetVersion String
+  criteriaVersion   String
+  nRows             Int
+  rocAuc            Float
+  prAuc             Float
+  brier             Float
+  reportPath        String
+  createdAt         DateTime @default(now())
+}
+
+// Partner API keys (Workstream E). Only the SHA-256 hash is stored; the
+// plaintext is shown once at creation and never persisted.
+model ApiKey {
+  id              String    @id
+  name            String
+  keyHash         String    @unique
+  rateLimitPerMin Int       @default(60)
+  createdAt       DateTime  @default(now())
+  lastUsedAt      DateTime?
+  revokedAt       DateTime?
+  webhooks        WebhookSubscription[]
+}
+
+// Score-change webhook subscriptions (Workstream E).
+model WebhookSubscription {
+  id        String    @id @default(cuid())
+  apiKeyId  String
+  address   String
+  chain     String
+  url       String
+  secret    String
+  createdAt DateTime  @default(now())
+  revokedAt DateTime?
+  apiKey    ApiKey    @relation(fields: [apiKeyId], references: [id])
+
+  @@index([address, chain])
+}
+
+// Resolved entity clusters (Workstream D). A cluster groups addresses judged
+// to be one actor above the merge confidence threshold. Merges are reversible:
+// reversedAt plus the retained links and cohesion are the audit trail, so a
+// wrong merge can be undone and explained.
+model Entity {
+  id          String             @id @default(cuid())
+  cohesion    Float
+  memberCount Int
+  createdAt   DateTime           @default(now())
+  reversedAt  DateTime?
+  reversedBy  String?
+  members     EntityMembership[]
+  audits      MergeAudit[]
+}
+
+model EntityMembership {
+  id         String   @id @default(cuid())
+  entityId   String
+  address    String
+  chain      String
+  // Confidence with which this address was attached to the entity.
+  confidence Float
+  addedAt    DateTime @default(now())
+  removedAt  DateTime?
+  entity     Entity   @relation(fields: [entityId], references: [id])
+
+  @@unique([entityId, address, chain])
+  @@index([address])
+}
+
+// Append-only log of every merge and reversal, with the signals that drove
+// the decision, so any entity association is explainable after the fact.
+model MergeAudit {
+  id        String   @id @default(cuid())
+  entityId  String
+  action    String   // 'merge' | 'reverse'
+  addressA  String
+  addressB  String
+  confidence Float
+  signals   Json
+  createdAt DateTime @default(now())
+  entity    Entity   @relation(fields: [entityId], references: [id])
+}
+
+// Server-issued, single-use, expiring nonces for authenticated write actions.
+// A signature is only accepted over a message the server itself issued and
+// bound to (address, action), which closes the replay hole where any captured
+// signature authorized any action forever.
+model AuthNonce {
+  id        String    @id @default(cuid())
+  address   String
+  action    String
+  message   String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([address])
+}
+
 model Notification {
   id        String   @id @default(cuid())
   address   String

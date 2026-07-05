@@ -64,5 +64,37 @@
       "schema": "messari",
       "subgraphId": "D7mapexM5ZsQckLJai2FawTKXJ7CqYGKM8PErnS3cJi9"
     }
-  ]
+  ],
+  "txExplorers": {
+    "ethereum": {
+      "chainId": 1,
+      "kind": "etherscan_v2"
+    },
+    "arbitrum": {
+      "chainId": 42161,
+      "kind": "etherscan_v2"
+    },
+    "optimism": {
+      "chainId": 10,
+      "kind": "etherscan_v2"
+    },
+    "polygon": {
+      "chainId": 137,
+      "kind": "etherscan_v2"
+    },
+    "base": {
+      "chainId": 8453,
+      "kind": "etherscan_v2"
+    },
+    "scroll": {
+      "chainId": 534352,
+      "kind": "blockscout",
+      "base": "https://blockscout.scroll.io/api"
+    },
+    "avalanche": {
+      "chainId": 43114,
+      "kind": "snowtrace",
+      "base": "https://api.snowtrace.io/api"
+    }
+  }
 }

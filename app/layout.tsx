@@ -3,6 +3,7 @@ import { Space_Grotesk, Inter, JetBrains_Mono } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import { Providers } from '@/components/Providers'
 import { Navbar } from '@/components/Navbar'
+import { clientEnv } from '@/lib/env.client'
 import './globals.css'
 
 const spaceGrotesk = Space_Grotesk({
@@ -27,7 +28,7 @@ export const metadata: Metadata = {
   title: 'ChainScore | Onchain Credit Scores and Lending Marketplace',
   description:
     'Free onchain credit scoring for any wallet, plus a lending marketplace. A single 300 to 850 score read from public chain history across 8 networks. No KYC required.',
-  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'https://chainscore.dev'),
+  metadataBase: new URL(clientEnv.NEXT_PUBLIC_APP_URL || 'https://chainscore.dev'),
   openGraph: {
     title: 'ChainScore | Onchain Credit Scores and Lending Marketplace',
     description: 'Score any wallet, then lend or borrow with reputation you can verify.',

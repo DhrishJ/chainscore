@@ -6,6 +6,7 @@ import { ScoreBadge } from '@/components/ScoreBadge'
 import { ScoreGauge } from '@/components/ScoreGauge'
 import { calculateOfferedAPR } from '@/lib/apr'
 import { calculateFee } from '@/lib/fees'
+import { requestNonce } from '@/lib/authClient'
 import Link from 'next/link'
 
 interface ScoreHistoryEntry {
@@ -96,8 +97,7 @@ export function ListingDetailClient({ listing }: { listing: Listing }) {
     setApplying(true)
     setApplyError(null)
     try {
-      const nonce = Math.random().toString(36).slice(2)
-      const message = `ChainScore: Apply to Loan\nNonce: ${nonce}\nTimestamp: ${new Date().toISOString().split('T')[0]}`
+      const { nonceId, message } = await requestNonce(address, 'apply_listing')
       const signature = await signMessageAsync({ message })
       const res = await fetch(`/api/listings/${listing.id}/apply`, {
         method: 'POST',
@@ -105,7 +105,7 @@ export function ListingDetailClient({ listing }: { listing: Listing }) {
         body: JSON.stringify({
           address,
           signature,
-          message,
+          nonceId,
           requestedAmount,
           applicationMessage,
         }),

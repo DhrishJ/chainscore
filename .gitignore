@@ -26,3 +26,10 @@ npm-debug.log*
 tsconfig.tsbuildinfo
 
 /lib/generated/prisma
+
+# playwright output
+test-results/
+playwright-report/
+
+# backtest input data (regenerated from model/data by scripts/export-backtest-holdout.py)
+data/backtest/

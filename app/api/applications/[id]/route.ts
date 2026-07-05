@@ -1,22 +1,39 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
 import { prisma } from '@/lib/db'
-import { verifyWalletSignature } from '@/lib/auth'
+import { verifyAuthorizedAction } from '@/lib/authNonce'
 import { isAddress } from 'viem'
 import { calculateFee } from '@/lib/fees'
 import { calculateOfferedAPR } from '@/lib/apr'
+
+const patchBodySchema = z.object({
+  address: z.string().min(1).max(64),
+  nonceId: z.string().min(1).max(128),
+  signature: z.string().min(1).max(2048),
+  action: z.enum(['withdraw', 'accept', 'reject']),
+})
 
 export async function PATCH(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const body = await req.json()
-  const { address, signature, message, action } = body
+  let raw: unknown
+  try {
+    raw = await req.json()
+  } catch {
+    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
+  }
+  const parsed = patchBodySchema.safeParse(raw)
+  if (!parsed.success) {
+    return NextResponse.json({ error: 'Invalid request' }, { status: 400 })
+  }
+  const { address, nonceId, signature, action } = parsed.data
 
-  if (!address || !isAddress(address)) {
+  if (!isAddress(address)) {
     return NextResponse.json({ error: 'Invalid address' }, { status: 400 })
   }
-  const valid = await verifyWalletSignature(address, message, signature)
-  if (!valid) return NextResponse.json({ error: 'Invalid signature' }, { status: 401 })
+  const auth = await verifyAuthorizedAction({ address, action: 'manage_application', nonceId, signature })
+  if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status })
 
   const application = await prisma.loanApplication.findUnique({
     where: { id: params.id },

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { isAddress } from 'viem'
+import { evmOrSolanaAddressSchema } from '@/lib/validation'
 
 export const dynamic = 'force-dynamic'
 
@@ -8,10 +8,11 @@ export async function GET(
   _req: NextRequest,
   { params }: { params: { address: string } }
 ) {
-  const addr = params.address.toLowerCase()
-  if (!isAddress(addr)) {
+  const parsedAddress = evmOrSolanaAddressSchema.safeParse(params.address)
+  if (!parsedAddress.success) {
     return NextResponse.json({ error: 'Invalid address' }, { status: 400 })
   }
+  const addr = parsedAddress.data
 
   try {
     const [wallet, listings, applications, activeLoans, loanHistory, reviewsReceived] =

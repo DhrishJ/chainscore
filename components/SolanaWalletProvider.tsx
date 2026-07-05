@@ -2,10 +2,9 @@
 import { useMemo } from 'react'
 import { ConnectionProvider, WalletProvider } from '@solana/wallet-adapter-react'
 import { WalletModalProvider } from '@solana/wallet-adapter-react-ui'
-import { PhantomWalletAdapter, SolflareWalletAdapter } from '@solana/wallet-adapter-wallets'
+import { PhantomWalletAdapter } from '@solana/wallet-adapter-phantom'
+import { SolflareWalletAdapter } from '@solana/wallet-adapter-solflare'
 import '@solana/wallet-adapter-react-ui/styles.css'
-
-const SOLANA_RPC = `https://mainnet.helius-rpc.com/?api-key=${process.env.NEXT_PUBLIC_HELIUS_API_KEY}`
 
 export function SolanaWalletProvider({ children }: { children: React.ReactNode }) {
   const wallets = useMemo(
@@ -13,8 +12,16 @@ export function SolanaWalletProvider({ children }: { children: React.ReactNode }
     []
   )
 
+  // RPC calls go through the server-side proxy so no API key ships in the
+  // client bundle. Connection requires an absolute URL; during SSR the
+  // placeholder origin is never actually fetched.
+  const endpoint = useMemo(() => {
+    if (typeof window !== 'undefined') return `${window.location.origin}/api/solana-rpc`
+    return 'https://chainscore.dev/api/solana-rpc'
+  }, [])
+
   return (
-    <ConnectionProvider endpoint={SOLANA_RPC}>
+    <ConnectionProvider endpoint={endpoint}>
       <WalletProvider wallets={wallets} autoConnect>
         <WalletModalProvider>{children}</WalletModalProvider>
       </WalletProvider>

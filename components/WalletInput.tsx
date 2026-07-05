@@ -61,6 +61,7 @@ export function WalletInput({
             value={chain}
             onChange={(e) => setChain(e.target.value)}
             disabled={loading}
+            aria-label="Select chain"
             className="px-3 py-3 rounded-xl bg-card border border-border text-text text-sm outline-none focus:border-accent/60 transition-all cursor-pointer"
           >
             {CHAIN_LIST.map((c) => (

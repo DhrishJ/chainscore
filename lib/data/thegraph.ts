@@ -1,4 +1,5 @@
 import coverage from './coverage.generated.json'
+import { env } from '@/lib/env.server'
 
 // Single source of truth for protocol/chain coverage. coverage.generated.json is
 // GENERATED from model/config.yaml by model/src/export_coverage.py, so live
@@ -18,8 +19,7 @@ function deploymentsFor(family: string, chainSlug: string): Deployment[] {
 }
 
 function gatewayUrl(subgraphId: string): string {
-  const apiKey = process.env.THEGRAPH_API_KEY || ''
-  return `https://gateway.thegraph.com/api/${apiKey}/subgraphs/id/${subgraphId}`
+  return `https://gateway.thegraph.com/api/${env.THEGRAPH_API_KEY}/subgraphs/id/${subgraphId}`
 }
 
 async function queryGraph(url: string, query: string, variables: Record<string, string>) {

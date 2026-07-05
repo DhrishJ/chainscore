@@ -6,10 +6,13 @@ import { mainnet } from 'viem/chains'
 import { ScoreGauge } from '@/components/ScoreGauge'
 import { ScoreCountUp } from '@/components/ScoreCountUp'
 import { FactorCard } from '@/components/FactorCard'
+import { RadarFactors } from '@/components/explain/RadarFactors'
+import { ContributionWaterfall } from '@/components/explain/ContributionWaterfall'
 import { ImprovementTips } from '@/components/ImprovementTips'
 import { ShareButton } from '@/components/ShareButton'
 import { WalletInput } from '@/components/WalletInput'
-import { getFirstTransaction, getTransactionHistory } from '@/lib/data/etherscan'
+import { getFirstTransaction, getTransactionHistory } from '@/lib/ingest/txHistory'
+import { computeCompleteness } from '@/lib/ingest/completeness'
 import { getTokenBalances } from '@/lib/data/alchemy'
 import { getAaveActivity, getCompoundActivity, getUniswapActivity } from '@/lib/data/thegraph'
 import { computeScore } from '@/lib/data/mlScorer'
@@ -23,6 +26,8 @@ import {
   getSolanaDefiActivity,
 } from '@/lib/data/helius'
 import { computeSolanaScore } from '@/lib/data/solanaScorer'
+import { env } from '@/lib/env.server'
+import { clientEnv } from '@/lib/env.client'
 import type { ScoreResult, RawWalletData } from '@/types'
 
 interface Props {
@@ -34,7 +39,7 @@ interface Props {
 const ensClient = createPublicClient({
   chain: mainnet,
   transport: http(
-    'https://eth-mainnet.g.alchemy.com/v2/' + (process.env.ALCHEMY_API_KEY || '')
+    'https://eth-mainnet.g.alchemy.com/v2/' + env.ALCHEMY_API_KEY
   ),
 })
 
@@ -151,6 +156,9 @@ async function resolveAndScore(input: string, chainSlug: string): Promise<ScoreR
 
   const result = computeScore(rawData)
   result.address = address
+  const completeness = computeCompleteness(errors)
+  result.dataCompleteness = completeness.dataCompleteness
+  result.degradedSources = completeness.degradedSources
   if (!result.noBorrowHistory && !result.newWallet) {
     recentScores.add({ address, score: result.score, timestamp: Date.now() })
   }
@@ -198,7 +206,7 @@ async function resolveAndScoreSolana(address: string): Promise<ScoreResult | nul
 }
 
 export async function generateMetadata({ params, searchParams }: Props): Promise<Metadata> {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://chainscore.dev'
+  const appUrl = clientEnv.NEXT_PUBLIC_APP_URL || 'https://chainscore.dev'
   const { address } = params
 
   return {
@@ -424,6 +432,38 @@ export default async function ScorePage({ params, searchParams }: Props) {
                     grade={result.grade}
                   />
                 </div>
+
+                {/* Provenance: every displayed score names the model that
+                    produced it, when it was computed, and, when a data source
+                    was degraded, how complete the inputs were. Real values
+                    from the scoring result, never placeholders. */}
+                <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted justify-center sm:justify-start">
+                  {result.modelVersion && (
+                    <span title="The versioned model that produced this score">
+                      Model <span className="font-mono text-text">{result.modelVersion}</span>
+                    </span>
+                  )}
+                  <span aria-hidden="true">·</span>
+                  <span title="When this score was computed from onchain data">
+                    Scored {new Date(result.timestamp).toISOString().replace('T', ' ').slice(0, 16)} UTC
+                  </span>
+                  {typeof result.calibratedPD === 'number' && (
+                    <>
+                      <span aria-hidden="true">·</span>
+                      <span title="Calibrated probability of default the score is derived from">
+                        PD {(result.calibratedPD * 100).toFixed(1)}%
+                      </span>
+                    </>
+                  )}
+                  {typeof result.dataCompleteness === 'number' && result.dataCompleteness < 1 && (
+                    <>
+                      <span aria-hidden="true">·</span>
+                      <span className="text-warning" title={`Some data sources were degraded: ${(result.degradedSources ?? []).join(', ') || 'unknown'}`}>
+                        {Math.round(result.dataCompleteness * 100)}% data completeness
+                      </span>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -443,6 +483,13 @@ export default async function ScorePage({ params, searchParams }: Props) {
                 <FactorCard key={factor.name} factor={factor} />
               ))}
             </div>
+
+            {result.factors.length > 0 && !result.newWallet && !result.noBorrowHistory && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
+                <RadarFactors factors={result.factors} />
+                <ContributionWaterfall contributions={result.topContributions} />
+              </div>
+            )}
           </div>
 
           <ImprovementTips factors={result.factors} />

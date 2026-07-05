@@ -140,3 +140,17 @@ a {
     --chart-5: 340 75% 55%;
   }
 }
+
+/* Respect prefers-reduced-motion globally: users who ask for less motion get
+   near-instant transitions and no animations, per Workstream A accessibility.
+   Individual components also gate motion, this is the safety net. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}

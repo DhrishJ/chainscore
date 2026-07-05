@@ -1,5 +1,6 @@
 import { ImageResponse } from '@vercel/og'
 import { NextRequest } from 'next/server'
+import { clientEnv } from '@/lib/env.client'
 
 export const runtime = 'edge'
 
@@ -26,7 +27,7 @@ export async function GET(
   { params }: { params: { address: string } }
 ) {
   const { address } = params
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://chainscore.dev'
+  const appUrl = clientEnv.NEXT_PUBLIC_APP_URL || 'https://chainscore.dev'
 
   let score = 300
   let grade = 'F'

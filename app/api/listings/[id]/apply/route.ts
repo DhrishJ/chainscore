@@ -1,24 +1,45 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
 import { prisma } from '@/lib/db'
-import { verifyWalletSignature } from '@/lib/auth'
+import { verifyAuthorizedAction } from '@/lib/authNonce'
 import { isAddress } from 'viem'
+
+const applyBodySchema = z.object({
+  address: z.string().min(1).max(64),
+  nonceId: z.string().min(1).max(128),
+  signature: z.string().min(1).max(2048),
+  requestedAmount: z.coerce.number().positive().finite().max(1_000_000_000),
+  applicationMessage: z.string().max(1000).optional(),
+})
 
 export async function POST(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const body = await req.json()
-  const { address, signature, message, requestedAmount, applicationMessage } = body
+  let raw: unknown
+  try {
+    raw = await req.json()
+  } catch {
+    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
+  }
+  const parsed = applyBodySchema.safeParse(raw)
+  if (!parsed.success) {
+    return NextResponse.json({ error: 'Invalid application data' }, { status: 400 })
+  }
+  const { address, nonceId, signature, requestedAmount, applicationMessage } = parsed.data
 
-  if (!address || !isAddress(address)) {
+  if (!isAddress(address)) {
     return NextResponse.json({ error: 'Invalid address' }, { status: 400 })
   }
-  const valid = await verifyWalletSignature(address, message, signature)
-  if (!valid) return NextResponse.json({ error: 'Invalid signature' }, { status: 401 })
+  const auth = await verifyAuthorizedAction({ address, action: 'apply_listing', nonceId, signature })
+  if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status })
 
   const listing = await prisma.loanListing.findUnique({ where: { id: params.id } })
   if (!listing || listing.status !== 'OPEN') {
     return NextResponse.json({ error: 'Listing not available' }, { status: 404 })
+  }
+  if (requestedAmount > listing.amount) {
+    return NextResponse.json({ error: 'Requested amount exceeds the listing amount' }, { status: 400 })
   }
 
   const borrowerWallet = await prisma.wallet.findUnique({
@@ -48,7 +69,7 @@ export async function POST(
       listingId: params.id,
       borrowerAddress: address.toLowerCase(),
       borrowerScore: borrowerWallet.score,
-      requestedAmount: parseFloat(requestedAmount),
+      requestedAmount,
       message: applicationMessage || null,
     },
   })

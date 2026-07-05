@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { isAddress } from 'viem'
 import { createPublicClient, http } from 'viem'
 import { mainnet } from 'viem/chains'
-import { getFirstTransaction, getTransactionHistory } from '@/lib/data/etherscan'
+import { getFirstTransaction, getTransactionHistory } from '@/lib/ingest/txHistory'
+import { computeCompleteness } from '@/lib/ingest/completeness'
 import { getTokenBalances } from '@/lib/data/alchemy'
 import { getAaveActivity, getCompoundActivity, getUniswapActivity } from '@/lib/data/thegraph'
 import { computeScore } from '@/lib/data/mlScorer'
@@ -17,20 +18,35 @@ import { getChain } from '@/lib/chains'
 import { isSolanaAddress } from '@/lib/solanaAuth'
 import type { RawWalletData } from '@/types'
 import { recentScores } from '@/lib/recentScores'
+import { env } from '@/lib/env.server'
+import { addressParamSchema, chainSlugSchema } from '@/lib/validation'
 
 export const revalidate = 3600
 
 const ensClient = createPublicClient({
   chain: mainnet,
-  transport: http('https://eth-mainnet.g.alchemy.com/v2/' + (process.env.ALCHEMY_API_KEY || '')),
+  transport: http('https://eth-mainnet.g.alchemy.com/v2/' + env.ALCHEMY_API_KEY),
 })
 
 export async function GET(
   req: NextRequest,
   { params }: { params: { address: string } }
 ) {
-  const chainSlug = req.nextUrl.searchParams.get('chain') || 'ethereum'
+  const chainSlugParsed = chainSlugSchema.safeParse(req.nextUrl.searchParams.get('chain') ?? undefined)
+  const chainSlug = chainSlugParsed.success ? chainSlugParsed.data : 'ethereum'
   const { address } = params
+
+  // Shape check before any provider call, including the ENS resolution call
+  // below, so malformed input never reaches an external API. The specific
+  // error message still depends on which chain the caller targeted, mirrored
+  // from the branching logic further down so the public contract is
+  // unchanged for valid input.
+  if (!addressParamSchema.safeParse(address).success) {
+    return NextResponse.json(
+      { error: chainSlug === 'solana' ? 'Invalid Solana address' : 'Invalid address' },
+      { status: 400 }
+    )
+  }
 
   // ── Solana path ──────────────────────────────────────────────────────────
   if (chainSlug === 'solana' || isSolanaAddress(address)) {
@@ -165,6 +181,13 @@ export async function GET(
 
   const result = computeScore(rawData)
   result.address = evmAddress
+  const completeness = computeCompleteness(errors)
+  result.dataCompleteness = completeness.dataCompleteness
+  result.degradedSources = completeness.degradedSources
   recentScores.add({ address: evmAddress, score: result.score, timestamp: Date.now() })
-  return NextResponse.json(result)
+  // This unversioned endpoint is the legacy web-client contract. Partners
+  // should migrate to the authenticated /api/v1/score envelope.
+  return NextResponse.json(result, {
+    headers: { Deprecation: 'true', Link: '</api/v1/score>; rel="successor-version"' },
+  })
 }

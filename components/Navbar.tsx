@@ -6,13 +6,15 @@ import { Menu, X } from 'lucide-react'
 import { WalletConnectButton } from './WalletConnectButton'
 import { NotificationBell } from './NotificationBell'
 import { ThemeToggle } from './ThemeToggle'
-import { SolanaWalletButton } from './SolanaWalletButton'
+import { LazySolanaButton } from './LazySolanaButton'
+import { CommandPalette } from './CommandPalette'
 
 export function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false)
 
   return (
     <nav className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <CommandPalette />
       <div className="mx-auto max-w-7xl px-4 h-14 flex items-center justify-between">
         <div className="flex items-center gap-6">
           <Link
@@ -28,11 +30,14 @@ export function Navbar() {
             <Link href="/dashboard" className="hover:text-text transition-colors">
               Dashboard
             </Link>
+            <Link href="/retrospective" className="hover:text-text transition-colors">
+              Retrospective
+            </Link>
           </div>
         </div>
         <div className="flex items-center gap-2">
           <ThemeToggle />
-          <SolanaWalletButton />
+          <LazySolanaButton />
           <NotificationBell />
           <WalletConnectButton />
           <button
@@ -51,6 +56,9 @@ export function Navbar() {
           </Link>
           <Link href="/dashboard" className="hover:text-text transition-colors" onClick={() => setMobileOpen(false)}>
             Dashboard
+          </Link>
+          <Link href="/retrospective" className="hover:text-text transition-colors" onClick={() => setMobileOpen(false)}>
+            Retrospective
           </Link>
         </div>
       )}

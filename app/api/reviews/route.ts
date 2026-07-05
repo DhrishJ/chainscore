@@ -1,21 +1,37 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
 import { prisma } from '@/lib/db'
-import { verifyWalletSignature } from '@/lib/auth'
+import { verifyAuthorizedAction } from '@/lib/authNonce'
 import { isAddress } from 'viem'
 
+const reviewBodySchema = z.object({
+  address: z.string().min(1).max(64),
+  nonceId: z.string().min(1).max(128),
+  signature: z.string().min(1).max(2048),
+  loanId: z.string().regex(/^[a-z0-9]{20,32}$/),
+  revieweeAddress: z.string().min(1).max(64),
+  rating: z.coerce.number().int().min(1).max(5),
+  comment: z.string().max(1000).optional(),
+})
+
 export async function POST(req: NextRequest) {
-  const body = await req.json()
-  const { address, signature, message, loanId, revieweeAddress, rating, comment } = body
-
-  if (!address || !isAddress(address)) {
-    return NextResponse.json({ error: 'Invalid address' }, { status: 400 })
+  let raw: unknown
+  try {
+    raw = await req.json()
+  } catch {
+    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
   }
-  const valid = await verifyWalletSignature(address, message, signature)
-  if (!valid) return NextResponse.json({ error: 'Invalid signature' }, { status: 401 })
-
-  if (!loanId || !revieweeAddress || !rating || rating < 1 || rating > 5) {
+  const parsed = reviewBodySchema.safeParse(raw)
+  if (!parsed.success) {
     return NextResponse.json({ error: 'Invalid review data' }, { status: 400 })
   }
+  const { address, nonceId, signature, loanId, revieweeAddress, rating, comment } = parsed.data
+
+  if (!isAddress(address) || !isAddress(revieweeAddress)) {
+    return NextResponse.json({ error: 'Invalid address' }, { status: 400 })
+  }
+  const auth = await verifyAuthorizedAction({ address, action: 'create_review', nonceId, signature })
+  if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status })
 
   const loan = await prisma.loan.findUnique({ where: { id: loanId } })
   if (!loan || loan.status !== 'REPAID') {

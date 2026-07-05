@@ -1,5 +1,6 @@
-const HELIUS_API_KEY = process.env.HELIUS_API_KEY || ''
-const HELIUS_RPC = `https://mainnet.helius-rpc.com/?api-key=${HELIUS_API_KEY}`
+import { env } from '@/lib/env.server'
+
+const HELIUS_RPC = `https://mainnet.helius-rpc.com/?api-key=${env.HELIUS_API_KEY}`
 const HELIUS_API_BASE = `https://api.helius.xyz/v0`
 
 // Known liquid staking token mints
@@ -104,7 +105,7 @@ export async function getSolanaDefiActivity(address: string): Promise<SolanaDefi
     hasMarginfi: false, hasMarinade: false, borrowCount: 0, repayCount: 0,
   }
   try {
-    const url = `${HELIUS_API_BASE}/addresses/${address}/transactions?api-key=${HELIUS_API_KEY}&limit=100`
+    const url = `${HELIUS_API_BASE}/addresses/${address}/transactions?api-key=${env.HELIUS_API_KEY}&limit=100`
     const res = await fetch(url, { next: { revalidate: 3600 } })
     if (!res.ok) return empty
 

@@ -4,7 +4,6 @@ import { RainbowKitProvider, darkTheme, lightTheme } from '@rainbow-me/rainbowki
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { wagmiConfig } from '@/lib/wagmi'
 import { ThemeProvider, useTheme } from '@/lib/theme'
-import { SolanaWalletProvider } from '@/components/SolanaWalletProvider'
 import '@rainbow-me/rainbowkit/styles.css'
 
 const queryClient = new QueryClient()
@@ -23,11 +22,11 @@ export function Providers({ children }: { children: React.ReactNode }) {
     <ThemeProvider>
       <WagmiProvider config={wagmiConfig}>
         <QueryClientProvider client={queryClient}>
-          <RainbowWrapper>
-            <SolanaWalletProvider>
-              {children}
-            </SolanaWalletProvider>
-          </RainbowWrapper>
+          {/* The Solana wallet provider is no longer global. It loads lazily
+              via LazySolanaButton (Navbar) and wraps only the marketplace,
+              the sole other Solana-context consumer, so the adapter tree stays
+              out of first paint on every other page. */}
+          <RainbowWrapper>{children}</RainbowWrapper>
         </QueryClientProvider>
       </WagmiProvider>
     </ThemeProvider>
