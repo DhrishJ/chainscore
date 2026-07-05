@@ -111,9 +111,10 @@ for.
   `eval`/wasm and opens RPC/WebSocket connections to many hosts; enforcement
   (dropping `unsafe-eval`, adding nonces) needs a clean violation-report
   window first.
-- **Dependency audit gate is report-only (`DECISIONS.md` D-005).** CI's
-  `npm audit` and `osv-scanner` jobs run with `continue-on-error: true`
-  (see `.github/workflows/ci.yml`). The baseline is 138 findings (2
-  critical, 21 high), almost entirely inside the `@solana/wallet-adapter-*`
-  dependency tree. Flipping this to a hard gate is scheduled for the
-  hardening pass once that dependency tree is trimmed or replaced.
+- **Remaining dependency-audit highs need breaking upgrades (`DECISIONS.md`
+  D-028).** The wallet tree was slimmed to the Phantom and Solflare adapters
+  and `npm audit` now gates CI on critical findings (currently zero). The
+  five remaining highs sit in `next` itself (fix is the Next 16 major),
+  dev-only `eslint-config-next` tooling, and `ws` under the Solana mobile
+  protocol; they are accepted until those upgrades are scheduled.
+  `osv-scanner` stays report-only (no severity threshold in the action).
