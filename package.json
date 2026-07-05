@@ -13,7 +13,8 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "test:ci": "vitest run && playwright test",
-    "backtest": "tsx scripts/runBacktest.ts"
+    "backtest": "tsx scripts/runBacktest.ts",
+    "loadtest": "tsx scripts/loadTest.ts"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",

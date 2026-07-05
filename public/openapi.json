@@ -1,0 +1,327 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "ChainScore Partner API",
+    "version": "1.0.0",
+    "summary": "Versioned wallet credit-scoring API for partners.",
+    "description": "Authenticated partner API for retrieving ChainScore wallet credit envelopes and registering score-change webhooks. All v1 endpoints require a bearer API key (`cs_live_...`) and are rate-limited per key.",
+    "contact": {
+      "name": "ChainScore",
+      "url": "https://chainscore.dev"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://chainscore.dev",
+      "description": "Production"
+    }
+  ],
+  "security": [
+    { "bearerAuth": [] }
+  ],
+  "tags": [
+    { "name": "score", "description": "Wallet credit score envelope" },
+    { "name": "webhooks", "description": "Score-change webhook subscriptions" }
+  ],
+  "paths": {
+    "/api/v1/score/{address}": {
+      "get": {
+        "operationId": "getScore",
+        "tags": ["score"],
+        "summary": "Get a wallet's credit score envelope",
+        "description": "Returns the versioned scoring envelope for a wallet: the calibrated score, grade, contributing factors, integrity assessment, and data-completeness/provenance metadata. Results may be served from cache; check `cached` and `stale` on the response body, and `X-ChainScore-Cached` on the response headers.",
+        "parameters": [
+          {
+            "name": "address",
+            "in": "path",
+            "required": true,
+            "description": "EVM address (0x...), Solana address, or ENS name (.eth).",
+            "schema": { "type": "string" },
+            "example": "0x1234567890abcdef1234567890abcdef12345678"
+          },
+          {
+            "name": "chain",
+            "in": "query",
+            "required": false,
+            "description": "Chain to score the wallet on. Defaults to ethereum. `solana` is accepted by validation but currently returns 501 (not yet available on v1).",
+            "schema": {
+              "type": "string",
+              "enum": ["ethereum", "polygon", "arbitrum", "optimism", "base", "avalanche", "bnb", "solana"],
+              "default": "ethereum"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Scoring envelope.",
+            "headers": {
+              "X-RateLimit-Remaining": { "$ref": "#/components/headers/XRateLimitRemaining" },
+              "X-ChainScore-Model-Version": {
+                "description": "The model version that produced this score.",
+                "schema": { "type": "string" }
+              },
+              "X-ChainScore-Cached": {
+                "description": "Whether this response was served from cache (\"true\" or \"false\").",
+                "schema": { "type": "string", "enum": ["true", "false"] }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ScoreEnvelope" }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid address.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } }
+            }
+          },
+          "401": {
+            "description": "Missing, malformed, or invalid API key.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } }
+            }
+          },
+          "403": {
+            "description": "API key has been revoked.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded for this API key.",
+            "headers": {
+              "Retry-After": { "$ref": "#/components/headers/RetryAfter" },
+              "X-RateLimit-Remaining": { "$ref": "#/components/headers/XRateLimitRemaining" }
+            },
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } }
+            }
+          },
+          "501": {
+            "description": "Solana scoring is not available on the v1 API yet.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/webhooks": {
+      "post": {
+        "operationId": "createWebhook",
+        "tags": ["webhooks"],
+        "summary": "Register a score-change webhook",
+        "description": "Registers an HTTPS callback that ChainScore will notify when the watched wallet's score changes. The returned `secret` signs every delivery and is shown exactly once, at creation.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateWebhookRequest" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Webhook subscription created.",
+            "headers": {
+              "X-RateLimit-Remaining": { "$ref": "#/components/headers/XRateLimitRemaining" }
+            },
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/WebhookSubscription" } }
+            }
+          },
+          "400": {
+            "description": "Invalid JSON body or failed validation (bad address, bad chain, url must be https).",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } }
+            }
+          },
+          "401": {
+            "description": "Missing, malformed, or invalid API key.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } }
+            }
+          },
+          "403": {
+            "description": "API key has been revoked.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded for this API key.",
+            "headers": {
+              "Retry-After": { "$ref": "#/components/headers/RetryAfter" },
+              "X-RateLimit-Remaining": { "$ref": "#/components/headers/XRateLimitRemaining" }
+            },
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } }
+            }
+          },
+          "500": {
+            "description": "Failed to create subscription.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "cs_live_...",
+        "description": "Partner API key, sent as `Authorization: Bearer cs_live_...`."
+      }
+    },
+    "headers": {
+      "XRateLimitRemaining": {
+        "description": "Requests remaining in the current rate-limit window for this API key.",
+        "schema": { "type": "integer", "minimum": 0 }
+      },
+      "RetryAfter": {
+        "description": "Seconds to wait before retrying, present on 429 responses.",
+        "schema": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "schemas": {
+      "ErrorResponse": {
+        "type": "object",
+        "required": ["error"],
+        "properties": {
+          "error": { "type": "string", "description": "Human-readable error message." }
+        }
+      },
+      "ChainSlug": {
+        "type": "string",
+        "enum": ["ethereum", "polygon", "arbitrum", "optimism", "base", "avalanche", "bnb"]
+      },
+      "Grade": {
+        "type": "string",
+        "enum": ["A", "B", "C", "D", "F"]
+      },
+      "Factor": {
+        "type": "object",
+        "description": "A single scoring factor's contribution to the model score.",
+        "required": ["name", "rawScore", "weight", "weightedScore", "explanation", "limitedData"],
+        "properties": {
+          "name": { "type": "string" },
+          "rawScore": { "type": "number", "minimum": 0, "maximum": 100, "description": "Raw factor score, 0-100." },
+          "weight": { "type": "number", "description": "Weight applied to this factor, e.g. 0.20." },
+          "weightedScore": { "type": "number" },
+          "explanation": { "type": "string" },
+          "limitedData": { "type": "boolean", "description": "True when this factor was computed from limited or degraded input data." }
+        }
+      },
+      "IntegritySignal": {
+        "type": "object",
+        "description": "A single manipulation-detector signal contributing to the integrity penalty.",
+        "required": ["id", "severity", "reason", "evidence"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "enum": ["wash_trading", "sybil_funding", "burst_timing", "instant_repay"]
+          },
+          "severity": { "type": "number", "minimum": 0, "maximum": 1, "description": "0 = no evidence, 1 = maximal evidence." },
+          "reason": { "type": "string", "description": "Human-readable explanation of the signal." },
+          "evidence": {
+            "type": "object",
+            "description": "Supporting counts for audit.",
+            "additionalProperties": { "type": "number" }
+          }
+        }
+      },
+      "Integrity": {
+        "type": "object",
+        "required": ["penalty", "flagged", "signals"],
+        "properties": {
+          "penalty": { "type": "number", "minimum": 0, "maximum": 1, "description": "0 = clean, 1 = maximal penalty." },
+          "flagged": { "type": "boolean" },
+          "signals": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/IntegritySignal" }
+          }
+        }
+      },
+      "ScoreEnvelope": {
+        "type": "object",
+        "description": "Versioned wallet credit-score envelope. Reproducible given the same inputs and the same (modelVersion, featureSetVersion).",
+        "required": [
+          "apiVersion",
+          "address",
+          "chain",
+          "score",
+          "grade",
+          "percentile",
+          "modelScore",
+          "modelVersion",
+          "featureSetVersion",
+          "factors",
+          "integrity",
+          "dataCompleteness",
+          "degradedSources",
+          "newWallet",
+          "noBorrowHistory",
+          "asOf",
+          "computedAt",
+          "cached",
+          "stale"
+        ],
+        "properties": {
+          "apiVersion": { "type": "string", "example": "v1" },
+          "address": { "type": "string" },
+          "chain": { "type": "string" },
+          "score": { "type": "number", "description": "Final score, after any integrity penalty. 300-850." },
+          "grade": { "$ref": "#/components/schemas/Grade" },
+          "percentile": { "type": "number" },
+          "modelScore": { "type": "number", "description": "The model's score before the integrity penalty, for transparency." },
+          "modelVersion": { "type": "string" },
+          "featureSetVersion": { "type": "string" },
+          "calibratedPD": { "type": "number", "description": "Calibrated probability of default, if available." },
+          "factors": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/Factor" }
+          },
+          "integrity": { "$ref": "#/components/schemas/Integrity" },
+          "dataCompleteness": { "type": "number", "minimum": 0, "maximum": 1, "description": "Fraction of feature input that actually arrived (1 = every source answered)." },
+          "degradedSources": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Source groups that failed or degraded during scoring."
+          },
+          "newWallet": { "type": "boolean" },
+          "noBorrowHistory": { "type": "boolean", "description": "True when the wallet has no detected borrowing history on tracked lending protocols." },
+          "asOf": { "type": "string", "format": "date-time" },
+          "computedAt": { "type": "string", "format": "date-time" },
+          "cached": { "type": "boolean" },
+          "stale": { "type": "boolean" }
+        }
+      },
+      "CreateWebhookRequest": {
+        "type": "object",
+        "required": ["address", "chain", "url"],
+        "properties": {
+          "address": { "type": "string", "description": "EVM or Solana address to watch." },
+          "chain": { "$ref": "#/components/schemas/ChainSlug" },
+          "url": { "type": "string", "format": "uri", "description": "HTTPS callback URL for webhook delivery." }
+        }
+      },
+      "WebhookSubscription": {
+        "type": "object",
+        "required": ["id", "secret", "address", "chain", "url"],
+        "properties": {
+          "id": { "type": "string" },
+          "secret": { "type": "string", "description": "Signing secret for webhook deliveries. Shown once, at creation." },
+          "address": { "type": "string" },
+          "chain": { "$ref": "#/components/schemas/ChainSlug" },
+          "url": { "type": "string", "format": "uri" }
+        }
+      }
+    }
+  }
+}
