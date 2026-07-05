@@ -255,3 +255,77 @@ scan runs in CI from Phase 0 onward).
   a risk penalty.
 - G: nonce-based SIWE-style auth for writes, zod everywhere, headers, RLS
   default-deny, secret scanning, key rotation.
+
+---
+
+# Post-rebuild architecture (updated 2026-07-05)
+
+Everything above is the original Phase 0 audit, kept for the record. This
+section describes the system after the phased rebuild (branch
+`rebuild/phase-0-1`, PR #1). It supersedes the audit where they disagree.
+
+## Delivered subsystems
+
+- **Ingestion (`lib/ingest/`)**: a `TxHistorySource` abstraction with
+  prioritized per-chain adapters (Etherscan v2, Snowtrace, Alchemy transfers),
+  automatic failover with exponential backoff and jitter, an outbound
+  per-provider rate limiter, opt-in cross-source reconciliation logging, and a
+  `data_completeness` score attached to every result. Kills the single-provider
+  dependency; Avalanche now has a working non-Etherscan primary.
+- **Model serving (`lib/data/mlScorer.ts`)**: unchanged in shape but upgraded to
+  `v5-xgb-cal` (34 features, ROC 0.849 / PR 0.599 on the fixed holdout). One
+  prediction pass yields the headline score, the factor bars, and the top signed
+  feature contributions.
+- **Point-in-time feature store + backtest (`lib/featureStore.ts`,
+  `lib/backtest/`)**: reconstructable-as-of feature snapshots, a backtest engine
+  that scores through the exact serving path with a zero-lookahead guarantee
+  (`LookaheadError`, proven by tests), weighted ROC/PR/Brier/ECE/reliability and
+  chain/cohort slices, reproducible via `npm run backtest`.
+- **Entity resolution (`lib/entity/`)**: multi-signal pairwise scoring,
+  high-confidence-only clustering, medium links surfaced as probabilities,
+  reversible audited merges, dust-defamation guardrails.
+- **Adversarial integrity (`lib/integrity/`, `lib/monitoring/`)**: wash-trade,
+  Sybil-funding, burst-timing, and instant-repay detectors folding into a graded
+  penalty applied downstream of the model; score-distribution drift and farming
+  monitors. Documented in THREAT_MODEL.md and COST_TO_GAME.md.
+- **Real-time API (`lib/scoring/`, `app/api/v1/`)**: a versioned, cached,
+  authenticated `/api/v1/score` returning a full envelope (model score,
+  integrity penalty, provenance, freshness), signed score-change webhooks, an
+  OpenAPI 3.1 spec, and graceful degradation to last-known-good. The legacy
+  `/api/score` stays alive with a Deprecation header.
+- **Security (`lib/env.*`, `lib/authNonce.ts`, `lib/apiKey.ts`,
+  `lib/validation.ts`, `lib/rateLimit.ts`, `middleware.ts`, `next.config.js`)**:
+  zod-validated env, replay-safe nonce auth for writes, hashed API keys, zod at
+  every boundary, IP and per-key rate limiting, security headers plus a
+  report-only CSP, a build-time client-bundle secret scan, and gitleaks in CI.
+- **Frontend (`app/`, `components/`)**: the Solana wallet tree lazy-loaded off
+  the critical path, the interactive liquidation retrospective reading real
+  backtest output, score explainability (radar + contribution waterfall), score
+  provenance, shareable card (copy link, download PNG, embed, Farcaster frame),
+  a command palette, reduced-motion support, and an axe a11y gate in CI.
+
+## Phase 0 findings, resolution status
+
+| Finding | Status |
+|---|---|
+| 6.1 Signature replay on all writes (CRITICAL) | Fixed: server-issued single-use expiring nonces (`lib/authNonce.ts`) |
+| 6.2 Helius key in client bundle (HIGH) | Fixed in code: server-side `/api/solana-rpc` proxy; key still needs rotation (owner) |
+| 6.3 No rate limiting (HIGH) | Fixed: IP + per-key limits in `middleware.ts` (per-instance; durable store pending, D-013) |
+| 6.4 Supabase RLS unknown (HIGH) | Open: the project no longer resolves; re-assess on the new database |
+| 6.5 No security headers / CORS (MODERATE) | Fixed: headers set; CSP report-only; strict partner CORS still to add with enforcement |
+| 6.6 Weak input validation (MODERATE) | Fixed: zod at every route boundary (`lib/validation.ts`) |
+| 6.7 Dependency vulnerabilities (MODERATE) | Partly addressed: audit + osv in CI (report-only, D-005); Solana tree isolated but not yet slimmed |
+| 6.8 Env hygiene (MODERATE) | Fixed: single zod-validated read point |
+| 5.2 Money as Float | Open: marketplace is inert; convert to Decimal if it activates |
+| 5.3 Dead write path (scoreSync unused) | Open: needs the database to populate Wallet/ScoreSnapshot |
+| 5.4 Old heuristic scorer present | Fixed: `lib/data/scorer.ts` and `etherscan.ts` removed |
+| 7.1 Request-time fan-out latency | Addressed: cache + envelope; cold path still provider-bound |
+| 7.5 Duplicated scoring orchestration | Addressed: shared `lib/scoring/live.ts` for the v1 path |
+| 7.8 No API versioning | Fixed: `/api/v1` with the legacy route deprecated |
+
+## Still open (tracked in DECISIONS.md and DEPLOYMENT.md)
+
+Durable shared store for cache and rate limits (D-013/D-018), exact per-key
+limits (D-019), CSP enforcement, dependency-audit gating (D-005), Solana
+wallet-adapter tree slimming, and the owner-side deploy blockers (new database,
+Helius rotation, Scroll on Alchemy).
