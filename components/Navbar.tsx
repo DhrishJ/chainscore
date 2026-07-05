@@ -6,7 +6,7 @@ import { Menu, X } from 'lucide-react'
 import { WalletConnectButton } from './WalletConnectButton'
 import { NotificationBell } from './NotificationBell'
 import { ThemeToggle } from './ThemeToggle'
-import { SolanaWalletButton } from './SolanaWalletButton'
+import { LazySolanaButton } from './LazySolanaButton'
 
 export function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false)
@@ -28,11 +28,14 @@ export function Navbar() {
             <Link href="/dashboard" className="hover:text-text transition-colors">
               Dashboard
             </Link>
+            <Link href="/retrospective" className="hover:text-text transition-colors">
+              Retrospective
+            </Link>
           </div>
         </div>
         <div className="flex items-center gap-2">
           <ThemeToggle />
-          <SolanaWalletButton />
+          <LazySolanaButton />
           <NotificationBell />
           <WalletConnectButton />
           <button
@@ -51,6 +54,9 @@ export function Navbar() {
           </Link>
           <Link href="/dashboard" className="hover:text-text transition-colors" onClick={() => setMobileOpen(false)}>
             Dashboard
+          </Link>
+          <Link href="/retrospective" className="hover:text-text transition-colors" onClick={() => setMobileOpen(false)}>
+            Retrospective
           </Link>
         </div>
       )}

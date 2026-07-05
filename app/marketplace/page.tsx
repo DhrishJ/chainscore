@@ -1,6 +1,6 @@
 import { Suspense } from 'react'
 import Link from 'next/link'
-import { MarketplaceClient } from './MarketplaceClient'
+import { MarketplaceShell } from './MarketplaceShell'
 
 export const metadata = {
   title: 'Loan Marketplace | ChainScore',
@@ -29,7 +29,7 @@ export default function MarketplacePage() {
           <div className="text-muted animate-pulse text-sm">Loading listings...</div>
         }
       >
-        <MarketplaceClient />
+        <MarketplaceShell />
       </Suspense>
     </main>
   )
