@@ -38,6 +38,28 @@ const schema = z.object({
   KV_REST_API_TOKEN: z.string().optional(),
   Chainscore_KV_REST_API_URL: z.string().optional(),
   Chainscore_KV_REST_API_TOKEN: z.string().optional(),
+
+  // ---- Autopilot agent layer (all optional: agents are off until keys and
+  // flags exist; nothing here may ever be NEXT_PUBLIC_) ----
+  // Model access for agent runs.
+  ANTHROPIC_API_KEY: z.string().optional(),
+  // Channel keys (marketing agent). Server-side only.
+  RESEND_API_KEY: z.string().optional(),
+  NEYNAR_API_KEY: z.string().optional(),
+  X_API_KEY: z.string().optional(),
+  X_API_SECRET: z.string().optional(),
+  X_ACCESS_TOKEN: z.string().optional(),
+  X_ACCESS_SECRET: z.string().optional(),
+  // Kill switch (G7): 'true' halts every agent at the orchestrator.
+  AGENTS_KILL_SWITCH: z.string().optional(),
+  // Per-agent feature flags: 'true' enables. Default off.
+  AGENT_STRATEGY_ENABLED: z.string().optional(),
+  AGENT_ENGINEERING_ENABLED: z.string().optional(),
+  AGENT_MARKETING_ENABLED: z.string().optional(),
+  // Spend caps (G2), read from config never from a model decision. Zero or
+  // absent means no spend is possible even when approved. Units: USD/day.
+  SPEND_CAP_DAILY_USD: z.coerce.number().min(0).default(0),
+  SPEND_CAP_CHANNEL_DAILY_USD: z.coerce.number().min(0).default(0),
 })
 
 const parsed = schema.safeParse(process.env)
