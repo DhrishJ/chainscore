@@ -13,7 +13,10 @@ import type { ScoreEnvelope } from './service'
 // computedAtMs, not by Redis expiry.
 
 const LKG_TTL_SECONDS = 7 * 24 * 60 * 60
-const TIMEOUT_MS = 500
+// Matches the rate limiter's budget: a cold lambda's first TLS handshake to
+// Upstash can exceed 500ms, which showed up as sporadic fail-open cache
+// misses in production burst testing.
+const TIMEOUT_MS = 1000
 
 export interface SharedCacheEntry {
   envelope: ScoreEnvelope
