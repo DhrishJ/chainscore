@@ -1,5 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { createDurableRateLimiter, decide, windowKey } from '@/lib/rateLimitDurable'
+import {
+  createDurableRateLimiter,
+  decide,
+  keyMaxRedisKey,
+  windowKey,
+} from '@/lib/rateLimitDurable'
 
 const CONFIG = {
   restUrl: 'https://fake.upstash.io',
@@ -99,6 +104,44 @@ describe('createDurableRateLimiter', () => {
     const limiter = createDurableRateLimiter(CONFIG)
     const result = await limiter.limit('1.2.3.4')
     expect(result.allowed).toBe(true)
+  })
+
+  it('applies a mirrored per-key max when maxRedisKey resolves (D-019)', async () => {
+    // INCR says 5; default max is 3, but the mirror grants 10 -> allowed.
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({
+        ok: true,
+        status: 200,
+        json: async () => [{ result: 5 }, { result: 1 }, { result: '10' }],
+      })) as unknown as typeof fetch
+    )
+    const limiter = createDurableRateLimiter(CONFIG)
+    const result = await limiter.limit('k', { maxRedisKey: 'rl:keymax:abc' })
+    expect(result.allowed).toBe(true)
+    expect(result.remaining).toBe(5)
+  })
+
+  it('ignores corrupt or out-of-range mirror values', async () => {
+    for (const bad of ['garbage', '0', '-5', '9999999']) {
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async () => ({
+          ok: true,
+          status: 200,
+          json: async () => [{ result: 4 }, { result: 1 }, { result: bad }],
+        })) as unknown as typeof fetch
+      )
+      const limiter = createDurableRateLimiter(CONFIG)
+      const result = await limiter.limit('k', { maxRedisKey: 'rl:keymax:abc' })
+      // Falls back to the configured max of 3 -> count 4 is denied.
+      expect(result.allowed).toBe(false)
+    }
+  })
+
+  it('derives the mirror key from a hash prefix, never raw material', () => {
+    const hash = 'a'.repeat(64)
+    expect(keyMaxRedisKey(hash)).toBe(`rl:keymax:${'a'.repeat(16)}`)
   })
 
   it('sends INCR and PEXPIRE NX for the window key', async () => {

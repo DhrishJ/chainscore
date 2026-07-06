@@ -92,14 +92,13 @@ for.
 
 ## Known follow-ups still open (not blockers, but tracked)
 
-- **Durable rate limiting is wired; the score cache is still per-instance
-  (`DECISIONS.md` D-031 / D-018).** The middleware limiter uses Upstash
-  Redis (fixed-window, fail-open) whenever `KV_REST_API_URL`/`TOKEN` or
-  `UPSTASH_REDIS_REST_URL`/`TOKEN` are set, and falls back to per-instance
-  memory otherwise. The score cache (`lib/scoring/cache.ts`) still keeps
-  state per instance: a cached/stale envelope on one instance is invisible
-  to another. Moving the cache to the same Redis is a follow-up once cache
-  hit rates justify the extra round trip.
+- **Durable rate limiting, shared score cache, and per-key ceilings are
+  wired (`DECISIONS.md` D-031 / D-033).** The middleware limiter, the
+  score cache L2, and the ApiKey.rateLimitPerMin mirror all use the same
+  Upstash Redis REST credentials (`UPSTASH_REDIS_REST_*`, `KV_REST_API_*`,
+  or the marketplace-injected `Chainscore_KV_REST_API_*`), all fail open,
+  and all fall back to per-instance behavior when the credentials are
+  absent (dev, CI).
 - **Per-key exact rate limits (`DECISIONS.md` D-019).** The v1 middleware
   buckets by bearer token so a key can't multiply its budget across IPs, but
   it applies one fixed ceiling for everyone because the per-key
