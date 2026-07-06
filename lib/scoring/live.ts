@@ -8,7 +8,13 @@ import { getAaveActivity, getCompoundActivity, getUniswapActivity } from '@/lib/
 import { computeScore } from '@/lib/data/mlScorer'
 import { getChain } from '@/lib/chains'
 import type { RawWalletData } from '@/types'
-import { buildEnvelope, getCachedEnvelope, getLastKnownGood, putEnvelope, ScoreEnvelope } from './service'
+import {
+  buildEnvelope,
+  getCachedEnvelopeShared,
+  getLastKnownGoodShared,
+  putEnvelopeShared,
+  ScoreEnvelope,
+} from './service'
 
 // Shared live EVM scoring path used by the versioned API. Produces the full
 // envelope (model score + integrity penalty + provenance), reading from the
@@ -46,8 +52,10 @@ export async function scoreEvmWallet(inputAddress: string, chainSlug: string): P
   const evmAddress = await resolveEvmAddress(inputAddress)
   if (!evmAddress) return { envelope: null, error: { status: 400, message: 'Invalid or unresolvable address' } }
 
-  // Serve a fresh or usably-stale cached envelope without a provider round trip.
-  const cached = getCachedEnvelope(evmAddress, chain.slug)
+  // Serve a fresh cached envelope without a provider round trip. Reads the
+  // in-memory L1 first, then the shared Redis L2 (D-018), so a score computed
+  // by any instance serves from cache on every instance.
+  const cached = await getCachedEnvelopeShared(evmAddress, chain.slug)
   if (cached && !cached.stale) return { envelope: cached }
 
   const errors: Record<string, string> = {}
@@ -85,7 +93,7 @@ export async function scoreEvmWallet(inputAddress: string, chainSlug: string): P
   // Every source failed: degrade to last-known-good rather than an empty score.
   const totalSourcesFailed = Object.keys(errors).length
   if (totalSourcesFailed >= 4) {
-    const lkg = getLastKnownGood(evmAddress, chain.slug)
+    const lkg = await getLastKnownGoodShared(evmAddress, chain.slug)
     if (lkg) return { envelope: lkg }
   }
 
@@ -137,6 +145,6 @@ export async function scoreEvmWallet(inputAddress: string, chainSlug: string): P
 
   const records = 'records' in txHistResult ? txHistResult.records : []
   const envelope = buildEnvelope(result, chain.slug, { txs: records })
-  putEnvelope(envelope)
+  await putEnvelopeShared(envelope)
   return { envelope }
 }

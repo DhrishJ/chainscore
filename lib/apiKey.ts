@@ -1,5 +1,7 @@
 import { createHash, randomBytes, timingSafeEqual } from 'crypto'
 import { prisma } from '@/lib/db'
+import { env } from '@/lib/env.server'
+import { mirrorKeyLimit } from '@/lib/rateLimitDurable'
 
 // Partner API-key authentication (Workstream E/G).
 //
@@ -88,7 +90,18 @@ export async function authenticateApiKey(
   if (record.revokedAt) return { ok: false, status: 403, error: 'API key revoked' }
 
   void store.touch(record.id)
+  // Mirror the key's exact ceiling into Redis so edge middleware can enforce
+  // it (D-019). Fire-and-forget; absent Redis, the middleware default applies.
+  mirrorKeyLimit(redisConfig(), record.keyHash, record.rateLimitPerMin)
   return { ok: true, key: record }
+}
+
+function redisConfig(): { restUrl: string; restToken: string } | null {
+  const restUrl =
+    env.UPSTASH_REDIS_REST_URL ?? env.KV_REST_API_URL ?? env.Chainscore_KV_REST_API_URL
+  const restToken =
+    env.UPSTASH_REDIS_REST_TOKEN ?? env.KV_REST_API_TOKEN ?? env.Chainscore_KV_REST_API_TOKEN
+  return restUrl && restToken ? { restUrl, restToken } : null
 }
 
 export { KEY_PREFIX }

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createRateLimiter, type RateLimitResult } from '@/lib/rateLimit'
-import { createDurableRateLimiter } from '@/lib/rateLimitDurable'
+import { createDurableRateLimiter, keyMaxRedisKey } from '@/lib/rateLimitDurable'
 import { env } from '@/lib/env.server'
 
 // When Upstash Redis credentials are present (Vercel Marketplace injects the
@@ -16,7 +16,17 @@ const durableConfig =
   upstashUrl && upstashToken ? { restUrl: upstashUrl, restToken: upstashToken } : null
 
 interface AnyLimiter {
-  limit(key: string): RateLimitResult | Promise<RateLimitResult>
+  limit(key: string, opts?: { maxRedisKey?: string }): RateLimitResult | Promise<RateLimitResult>
+}
+
+// SHA-256 hex via WebCrypto (edge-safe). Matches lib/apiKey.ts hashKey, so
+// the v1 bucket and the D-019 per-key mirror key derive from the same hash
+// and no bearer-token material appears in Redis.
+async function sha256Hex(input: string): Promise<string> {
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(input))
+  return Array.from(new Uint8Array(digest))
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('')
 }
 
 function makeLimiter(prefix: string, windowMs: number, max: number): AnyLimiter {
@@ -76,11 +86,19 @@ export async function middleware(request: NextRequest) {
           ? rpcLimiter
           : defaultLimiter
 
-  // For v1, key on the bearer token if present so limiting follows the key.
-  const bearer = request.headers.get('authorization')?.replace(/^Bearer\s+/i, '').slice(0, 24)
-  const key = isV1 && bearer ? `v1:key:${bearer}` : `${bucket}:${ip}`
+  // For v1, key on (a hash of) the bearer token so limiting follows the key
+  // across IPs, and read the key's exact mirrored ceiling in the same Redis
+  // round trip (D-019).
+  const bearer = request.headers.get('authorization')?.replace(/^Bearer\s+/i, '').trim()
+  let key = `${bucket}:${ip}`
+  let maxRedisKey: string | undefined
+  if (isV1 && bearer) {
+    const bearerHash = await sha256Hex(bearer)
+    key = `v1:key:${bearerHash.slice(0, 16)}`
+    maxRedisKey = keyMaxRedisKey(bearerHash)
+  }
 
-  const result = await limiter.limit(key)
+  const result = await limiter.limit(key, maxRedisKey ? { maxRedisKey } : undefined)
 
   if (!result.allowed) {
     return NextResponse.json(

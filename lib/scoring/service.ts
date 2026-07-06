@@ -3,6 +3,7 @@ import type { TxRecord } from '@/lib/ingest/types'
 import { assessIntegrity, applyIntegrityPenalty } from '@/lib/integrity/detectors'
 import type { LendingEvent, IntegrityAssessment } from '@/lib/integrity/types'
 import { ScoreCache } from './cache'
+import { sharedCacheDelete, sharedCacheGet, sharedCachePut } from './cacheDurable'
 
 // Real-time scoring service (Workstream E). One entry point composes the
 // model score, the integrity penalty, versioning, and an as_of stamp into a
@@ -52,9 +53,11 @@ export interface IntegrityInputs {
 
 // Fresh for 5 minutes, usable (stale-flagged) up to 1 hour, the same window as
 // the route revalidate. Tunable without touching callers.
+const FRESH_MS = 5 * 60 * 1000
+const MAX_AGE_MS = 60 * 60 * 1000
 const scoreCache = new ScoreCache<ScoreEnvelope>({
-  freshMs: 5 * 60 * 1000,
-  maxAgeMs: 60 * 60 * 1000,
+  freshMs: FRESH_MS,
+  maxAgeMs: MAX_AGE_MS,
 })
 
 function cacheKey(address: string, chain: string): string {
@@ -138,4 +141,59 @@ export function getLastKnownGood(address: string, chain: string): ScoreEnvelope 
 
 export function scoreCacheSize(): number {
   return scoreCache.size
+}
+
+// ---- Shared (cross-instance) cache layer, D-018 ----
+//
+// Same semantics as the sync functions above, with Upstash Redis as an L2
+// under the in-memory L1. When Redis credentials are absent (dev, CI) these
+// behave identically to their sync counterparts. Callers on the live scoring
+// path use these; the sync functions stay for tests and non-async contexts.
+
+export async function getCachedEnvelopeShared(
+  address: string,
+  chain: string
+): Promise<ScoreEnvelope | null> {
+  const key = cacheKey(address, chain)
+  const l1 = scoreCache.get(key)
+  if (l1 && !(l1.ageMs > FRESH_MS)) {
+    return { ...l1.value, cached: true, stale: false }
+  }
+  const l2 = await sharedCacheGet(key)
+  if (l2) {
+    const ageMs = Date.now() - l2.computedAtMs
+    if (ageMs <= MAX_AGE_MS) {
+      // Hydrate L1 preserving the original compute time so staleness keeps
+      // aging correctly on this instance.
+      scoreCache.set(key, l2.envelope, l2.computedAtMs)
+      return { ...l2.envelope, cached: true, stale: ageMs > FRESH_MS }
+    }
+  }
+  if (l1) return { ...l1.value, cached: true, stale: l1.stale }
+  return null
+}
+
+export async function putEnvelopeShared(envelope: ScoreEnvelope): Promise<void> {
+  const key = cacheKey(envelope.address, envelope.chain)
+  const now = Date.now()
+  scoreCache.set(key, envelope, now)
+  sharedCachePut(key, envelope, now)
+}
+
+export async function invalidateScoreShared(address: string, chain: string): Promise<void> {
+  const key = cacheKey(address, chain)
+  scoreCache.invalidate(key)
+  sharedCacheDelete(key)
+}
+
+export async function getLastKnownGoodShared(
+  address: string,
+  chain: string
+): Promise<ScoreEnvelope | null> {
+  const key = cacheKey(address, chain)
+  const l1 = scoreCache.getLastKnownGood(key)
+  if (l1) return { ...l1.value, cached: true, stale: true }
+  const l2 = await sharedCacheGet(key)
+  if (l2) return { ...l2.envelope, cached: true, stale: true }
+  return null
 }

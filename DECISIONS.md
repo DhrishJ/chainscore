@@ -5,6 +5,41 @@ Each entry: date, decision, reasoning, alternatives rejected.
 
 ## 2026-07-05: Phase 6 (hardening)
 
+**D-033. Shared score cache as an L2 under the in-memory L1; per-key
+ceilings mirrored into Redis (resolves D-018 and D-019).**
+The scoring path now reads memory first, then Upstash (same credentials
+and fail-open posture as D-031), so an envelope computed by one serverless
+instance serves from cache on all of them, and last-known-good survives
+instance recycling (7-day Redis TTL; freshness judged from computedAtMs,
+not Redis expiry). A stale L1 deliberately re-reads L2 in case another
+instance computed fresher. For D-019, ApiKey.rateLimitPerMin is mirrored
+to Redis on every successful route auth (1h TTL, fire-and-forget) keyed by
+a SHA-256 prefix, and edge middleware reads the mirror in the same
+pipeline round trip as the counter, so exact per-key ceilings cost zero
+extra latency. Until a key's first authenticated request, the default
+ceiling (120/min) applies; a corrupt mirror value is bounds-checked and
+ignored. The middleware v1 bucket also switched from raw bearer prefixes
+to hash prefixes, removing secret material from Redis key names.
+
+**D-032. The EVM wallet stack loads on interaction or idle, not at
+hydration; the hero entrance animates transform only.**
+Mobile Lighthouse against production: performance 53, LCP 8.0s, TBT
+1,000ms, driven by ~1MB of wallet-stack script (wagmi, viem, RainbowKit,
+WalletConnect, Coinbase SDK) mounting globally at hydration on every
+route, plus the hero h1 (the LCP element) hiding behind an opacity
+entrance animation. EvmGate defers the subtree to first
+pointerdown/keydown or a 3.5s idle fallback (kept so returning users'
+wallet autoconnect still runs without interaction). Wallet pages
+force-mount via useRequireEvm and hold a shell during the chunk load.
+Accepted trade-offs: a static connect placeholder can require a second
+press if the user beats the idle timer (first press arms the mount);
+components that mount pre-gate remount once when the providers arrive.
+Rejected: nonce-based CSP-grade script deferral via dynamic rendering
+(performance regression elsewhere), and slimming inside wagmi (upstream
+tree, not ours to prune). The hero switches to a transform-only entrance:
+LCP counts the first visible paint, so opacity-gated entrances add their
+full duration to LCP by construction.
+
 **D-031. Durable rate limiting via Upstash Redis REST, fixed-window,
 fail-open (resolves the store half of D-013; D-019 stays open).**
 The middleware limiter becomes a shared quota across all serverless/edge
