@@ -300,3 +300,186 @@ model FactsRegistry {
 
   @@map("facts_registry")
 }
+
+// ---- Autopilot: shared agent-platform state (Phase 1) ----
+
+enum AgentTaskStatus {
+  QUEUED
+  IN_PROGRESS
+  DONE
+  BLOCKED
+  CANCELLED
+}
+
+enum AgentRunStatus {
+  RUNNING
+  SUCCEEDED
+  FAILED
+  HALTED
+}
+
+enum OutboxStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  EXECUTED
+  FAILED
+}
+
+enum OutboxKind {
+  SPEND
+  MERGE
+  DEPLOY
+  CONFIG
+  OTHER
+}
+
+enum ContentStatus {
+  IDEA
+  GENERATED
+  POSTED
+  BLOCKED
+  FAILED
+}
+
+model Goal {
+  id          String   @id @default(cuid())
+  title       String
+  description String
+  rationale   String
+  status      String   @default("proposed")
+  quarter     String?
+  createdBy   String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("goals")
+}
+
+model Kpi {
+  id         String    @id @default(cuid())
+  key        String    @unique
+  name       String
+  definition String
+  current    Float?
+  target     Float?
+  unit       String?
+  asOf       DateTime?
+  updatedBy  String
+  updatedAt  DateTime  @updatedAt
+
+  @@map("kpis")
+}
+
+model Sprint {
+  id       String      @id @default(cuid())
+  name     String
+  focus    String
+  status   String      @default("proposed")
+  startsAt DateTime
+  endsAt   DateTime
+  tasks    AgentTask[]
+
+  @@map("sprints")
+}
+
+model AgentTask {
+  id          String          @id @default(cuid())
+  title       String
+  description String
+  agent       String
+  status      AgentTaskStatus @default(QUEUED)
+  priority    Int             @default(3)
+  sprintId    String?
+  sprint      Sprint?         @relation(fields: [sprintId], references: [id])
+  result      String?
+  createdBy   String
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@index([status, priority])
+  @@map("agent_tasks")
+}
+
+model DecisionLog {
+  id        String   @id @default(cuid())
+  actor     String
+  summary   String
+  detail    String?
+  createdAt DateTime @default(now())
+
+  @@map("decision_log")
+}
+
+model AgentRun {
+  id           String         @id @default(cuid())
+  agent        String
+  trigger      String
+  status       AgentRunStatus @default(RUNNING)
+  model        String?
+  inputTokens  Int?
+  outputTokens Int?
+  costUsd      Float          @default(0)
+  summary      String?
+  error        String?
+  startedAt    DateTime       @default(now())
+  finishedAt   DateTime?
+  actions      AgentAction[]
+
+  @@index([agent, startedAt])
+  @@map("agent_runs")
+}
+
+model AgentAction {
+  id         String   @id @default(cuid())
+  runId      String
+  run        AgentRun @relation(fields: [runId], references: [id])
+  tool       String
+  inputJson  String
+  outputJson String?
+  status     String   @default("executed")
+  costUsd    Float    @default(0)
+  createdAt  DateTime @default(now())
+
+  @@index([runId])
+  @@map("agent_actions")
+}
+
+model OutboxItem {
+  id          String       @id @default(cuid())
+  kind        OutboxKind
+  title       String
+  payloadJson String
+  proposedBy  String
+  runId       String?
+  amountUsd   Float?
+  channel     String?
+  status      OutboxStatus @default(PENDING)
+  decidedBy   String?
+  decidedAt   DateTime?
+  executedAt  DateTime?
+  resultJson  String?
+  note        String?
+  createdAt   DateTime     @default(now())
+
+  @@index([status, createdAt])
+  @@map("outbox")
+}
+
+model ContentItem {
+  id          String        @id @default(cuid())
+  channel     String
+  status      ContentStatus @default(IDEA)
+  title       String?
+  body        String
+  factKeys    String?
+  utm         String?
+  externalId  String?
+  metricsJson String?
+  postedAt    DateTime?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@index([channel, status])
+  @@map("content_items")
+}

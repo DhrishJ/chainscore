@@ -67,6 +67,23 @@ const v1Limiter = makeLimiter('v1', 60_000, 120)
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
+
+  // Owner-only admin surface (Autopilot dashboard). Without a configured
+  // token the whole surface 404s; with one, a matching httpOnly cookie is
+  // required for everything except the login page itself.
+  if (pathname.startsWith('/admin')) {
+    if (!env.ADMIN_DASH_TOKEN) {
+      return NextResponse.rewrite(new URL('/404', request.url), { status: 404 })
+    }
+    if (pathname !== '/admin/login') {
+      const cookie = request.cookies.get('cs-admin')?.value
+      if (cookie !== env.ADMIN_DASH_TOKEN) {
+        return NextResponse.redirect(new URL('/admin/login', request.url))
+      }
+    }
+    return NextResponse.next()
+  }
+
   const ip = resolveIp(request)
 
   const isV1 = pathname.startsWith('/api/v1')
@@ -122,5 +139,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/api/:path*'],
+  matcher: ['/api/:path*', '/admin/:path*'],
 }

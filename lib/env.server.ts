@@ -52,6 +52,12 @@ const schema = z.object({
   X_ACCESS_SECRET: z.string().optional(),
   // Kill switch (G7): 'true' halts every agent at the orchestrator.
   AGENTS_KILL_SWITCH: z.string().optional(),
+  // Vercel Cron authenticates to /api/agents/cron with this bearer secret.
+  CRON_SECRET: z.string().optional(),
+  // Owner token for the /admin/autopilot dashboard (cookie-gated).
+  ADMIN_DASH_TOKEN: z.string().optional(),
+  // Where the nightly digest email goes (requires RESEND_API_KEY).
+  DIGEST_EMAIL: z.string().optional(),
   // Per-agent feature flags: 'true' enables. Default off.
   AGENT_STRATEGY_ENABLED: z.string().optional(),
   AGENT_ENGINEERING_ENABLED: z.string().optional(),
