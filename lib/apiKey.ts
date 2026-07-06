@@ -91,8 +91,9 @@ export async function authenticateApiKey(
 
   void store.touch(record.id)
   // Mirror the key's exact ceiling into Redis so edge middleware can enforce
-  // it (D-019). Fire-and-forget; absent Redis, the middleware default applies.
-  mirrorKeyLimit(redisConfig(), record.keyHash, record.rateLimitPerMin)
+  // it (D-019). Awaited: unawaited writes die when the serverless function
+  // freezes after responding. Absent Redis, the middleware default applies.
+  await mirrorKeyLimit(redisConfig(), record.keyHash, record.rateLimitPerMin)
   return { ok: true, key: record }
 }
 

@@ -69,19 +69,30 @@ export async function sharedCacheGet(cacheKey: string): Promise<SharedCacheEntry
   }
 }
 
-// Fire-and-forget: never let a cache write add latency or failure to the
-// scoring path.
-export function sharedCachePut(cacheKey: string, envelope: ScoreEnvelope, computedAtMs: number): void {
+// Awaited (with a short timeout), not fire-and-forget: on Vercel the
+// function freezes the moment the response is sent, which kills unawaited
+// promises — a dangling SET silently never reaches Redis. The write sits
+// behind a multi-second score compute, so the ~10ms round trip is noise.
+// Still fail-open: a Redis error logs and the request proceeds.
+export async function sharedCachePut(
+  cacheKey: string,
+  envelope: ScoreEnvelope,
+  computedAtMs: number
+): Promise<void> {
   if (!sharedCacheEnabled()) return
   const entry: SharedCacheEntry = { envelope, computedAtMs }
-  void command(['SET', redisKey(cacheKey), JSON.stringify(entry), 'EX', LKG_TTL_SECONDS]).catch(
-    (e) => console.error(`[score-cache] shared write failed (${e instanceof Error ? e.name : 'error'})`)
-  )
+  try {
+    await command(['SET', redisKey(cacheKey), JSON.stringify(entry), 'EX', LKG_TTL_SECONDS])
+  } catch (e) {
+    console.error(`[score-cache] shared write failed (${e instanceof Error ? e.name : 'error'})`)
+  }
 }
 
-export function sharedCacheDelete(cacheKey: string): void {
+export async function sharedCacheDelete(cacheKey: string): Promise<void> {
   if (!sharedCacheEnabled()) return
-  void command(['DEL', redisKey(cacheKey)]).catch((e) =>
+  try {
+    await command(['DEL', redisKey(cacheKey)])
+  } catch (e) {
     console.error(`[score-cache] shared delete failed (${e instanceof Error ? e.name : 'error'})`)
-  )
+  }
 }
