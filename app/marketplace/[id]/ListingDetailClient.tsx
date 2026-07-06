@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import { useAccount, useSignMessage } from 'wagmi'
 import { useWalletStore } from '@/lib/store'
+import { useRequireEvm } from '@/components/EvmGate'
 import { ScoreBadge } from '@/components/ScoreBadge'
 import { ScoreGauge } from '@/components/ScoreGauge'
 import { calculateOfferedAPR } from '@/lib/apr'
@@ -61,6 +62,14 @@ function gradeFromScore(s: number) {
 }
 
 export function ListingDetailClient({ listing }: { listing: Listing }) {
+  // Wallet-dependent page: mount the deferred EVM subtree immediately and
+  // hold a shell until wagmi context exists (D-032).
+  const evmReady = useRequireEvm()
+  if (!evmReady) return <main className="min-h-screen" />
+  return <ListingDetailInner listing={listing} />
+}
+
+function ListingDetailInner({ listing }: { listing: Listing }) {
   const { address, isConnected } = useAccount()
   const { score } = useWalletStore()
   const { signMessageAsync } = useSignMessage()

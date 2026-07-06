@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react'
 import { useAccount } from 'wagmi'
 import { useWalletStore } from '@/lib/store'
+import { useRequireEvm } from '@/components/EvmGate'
 import { ScoreBadge } from '@/components/ScoreBadge'
 import { ScoreGauge } from '@/components/ScoreGauge'
 import Link from 'next/link'
@@ -65,6 +66,14 @@ interface DashboardData {
 }
 
 export default function DashboardPage() {
+  // Wallet-dependent page: mount the deferred EVM subtree immediately and
+  // hold a shell until wagmi context exists (D-032).
+  const evmReady = useRequireEvm()
+  if (!evmReady) return <main className="min-h-screen" />
+  return <DashboardInner />
+}
+
+function DashboardInner() {
   const { address, isConnected } = useAccount()
   const { score } = useWalletStore()
   const [tab, setTab] = useState<Tab>('Overview')

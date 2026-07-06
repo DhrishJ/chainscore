@@ -1,61 +1,32 @@
 'use client'
-import { ConnectButton } from '@rainbow-me/rainbowkit'
-import { useAccount } from 'wagmi'
-import { useEffect } from 'react'
-import { useWalletStore } from '@/lib/store'
-import Link from 'next/link'
+import dynamic from 'next/dynamic'
+import { useEvmGate } from './EvmGate'
 
-function ScorePill({ score, grade }: { score: number; grade: string }) {
-  const color =
-    grade === 'A' || grade === 'B'
-      ? 'text-accent border-accent/30 bg-accent/10'
-      : grade === 'C' || grade === 'D'
-      ? 'text-warning border-warning/30 bg-warning/10'
-      : 'text-danger border-danger/30 bg-danger/10'
+// Critical-path half of the navbar connect button: NO static wagmi or
+// RainbowKit imports allowed in this file (D-032). Until the deferred EVM
+// subtree mounts, a static lookalike renders; a press arms the mount
+// (pointerdown anywhere already does), and the real ConnectButton swaps in
+// within the chunk-load time.
 
+const WalletConnectButtonInner = dynamic(() => import('./WalletConnectButtonInner'), {
+  ssr: false,
+  loading: () => <ConnectPlaceholder />,
+})
+
+function ConnectPlaceholder({ onPress }: { onPress?: () => void }) {
   return (
-    <span
-      className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium ${color}`}
+    <button
+      type="button"
+      onClick={onPress}
+      className="rounded-xl bg-[#0052FF] px-3.5 py-2 text-sm font-bold text-white transition-transform hover:scale-[1.025]"
     >
-      {score}{' '}
-      <span className="opacity-60">{grade}</span>
-    </span>
+      Connect Wallet
+    </button>
   )
 }
 
 export function WalletConnectButton() {
-  const { address, isConnected } = useAccount()
-  const { score, setScore, setLoadingScore, setAddress } = useWalletStore()
-
-  useEffect(() => {
-    if (!isConnected || !address) {
-      setAddress(null)
-      setScore(null)
-      return
-    }
-    setAddress(address)
-    // Skip if already loaded for this address
-    if (score?.address.toLowerCase() === address.toLowerCase()) return
-
-    setLoadingScore(true)
-    fetch(`/api/score/${address}`)
-      .then((r) => r.json())
-      .then((data) => {
-        setScore(data)
-        setLoadingScore(false)
-      })
-      .catch(() => setLoadingScore(false))
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [address, isConnected])
-
-  return (
-    <div className="flex items-center gap-2">
-      {isConnected && score && (
-        <Link href={`/score/${address}`}>
-          <ScorePill score={score.score} grade={score.grade} />
-        </Link>
-      )}
-      <ConnectButton showBalance={false} chainStatus="none" accountStatus="address" />
-    </div>
-  )
+  const { ready, require } = useEvmGate()
+  if (!ready) return <ConnectPlaceholder onPress={require} />
+  return <WalletConnectButtonInner />
 }
