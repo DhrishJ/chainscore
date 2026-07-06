@@ -34,7 +34,7 @@ describe('cacheDurable', () => {
     const mod = await import('@/lib/scoring/cacheDurable')
     expect(mod.sharedCacheEnabled()).toBe(false)
     expect(await mod.sharedCacheGet('ethereum:0xabc')).toBeNull()
-    mod.sharedCachePut('ethereum:0xabc', ENTRY_ENVELOPE as never, Date.now())
+    await mod.sharedCachePut('ethereum:0xabc', ENTRY_ENVELOPE as never, Date.now())
     expect(fetchMock).not.toHaveBeenCalled()
   })
 
@@ -59,9 +59,7 @@ describe('cacheDurable', () => {
     expect(mod.sharedCacheEnabled()).toBe(true)
 
     const computedAtMs = 1_700_000_000_000
-    mod.sharedCachePut('ethereum:0xabc', ENTRY_ENVELOPE as never, computedAtMs)
-    // put is fire-and-forget; give the microtask queue a tick
-    await new Promise((r) => setTimeout(r, 0))
+    await mod.sharedCachePut('ethereum:0xabc', ENTRY_ENVELOPE as never, computedAtMs)
 
     const entry = await mod.sharedCacheGet('ethereum:0xabc')
     expect(entry).not.toBeNull()

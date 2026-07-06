@@ -137,24 +137,31 @@ export function keyMaxRedisKey(keyHashHex: string): string {
   return `rl:keymax:${keyHashHex.slice(0, 16)}`
 }
 
-// Fire-and-forget: mirroring must never add latency or failure to auth.
-export function mirrorKeyLimit(
+// Awaited with a short timeout and swallowed errors: on Vercel, unawaited
+// promises are killed when the function freezes after responding, so a
+// fire-and-forget mirror write would silently never land. ~10ms on the
+// authenticated path; failure costs nothing but the default ceiling.
+export async function mirrorKeyLimit(
   config: { restUrl: string; restToken: string } | null,
   keyHashHex: string,
   limitPerMin: number
-): void {
+): Promise<void> {
   if (!config) return
   const base = config.restUrl.replace(/\/+$/, '')
-  void fetch(base, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${config.restToken}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify([
-      'SET',
-      keyMaxRedisKey(keyHashHex),
-      String(limitPerMin),
-      'EX',
-      String(KEY_MAX_TTL_SECONDS),
-    ]),
-    signal: AbortSignal.timeout(1000),
-  }).catch(() => undefined)
+  try {
+    await fetch(base, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${config.restToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify([
+        'SET',
+        keyMaxRedisKey(keyHashHex),
+        String(limitPerMin),
+        'EX',
+        String(KEY_MAX_TTL_SECONDS),
+      ]),
+      signal: AbortSignal.timeout(1000),
+    })
+  } catch {
+    // Fail open: the middleware default ceiling applies until the next auth.
+  }
 }

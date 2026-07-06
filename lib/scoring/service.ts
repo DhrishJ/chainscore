@@ -177,13 +177,13 @@ export async function putEnvelopeShared(envelope: ScoreEnvelope): Promise<void> 
   const key = cacheKey(envelope.address, envelope.chain)
   const now = Date.now()
   scoreCache.set(key, envelope, now)
-  sharedCachePut(key, envelope, now)
+  await sharedCachePut(key, envelope, now)
 }
 
 export async function invalidateScoreShared(address: string, chain: string): Promise<void> {
   const key = cacheKey(address, chain)
   scoreCache.invalidate(key)
-  sharedCacheDelete(key)
+  await sharedCacheDelete(key)
 }
 
 export async function getLastKnownGoodShared(
