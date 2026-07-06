@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import { useAccount } from 'wagmi'
 import { useWallet } from '@solana/wallet-adapter-react'
 import { useWalletStore } from '@/lib/store'
+import { useRequireEvm } from '@/components/EvmGate'
 import { ScoreBadge } from '@/components/ScoreBadge'
 import Link from 'next/link'
 import { calculateOfferedAPR } from '@/lib/apr'
@@ -52,6 +53,14 @@ function timeRemaining(expiresAt: string): string {
 }
 
 export function MarketplaceClient() {
+  // Wallet-dependent page: mount the deferred EVM subtree immediately and
+  // hold a shell until wagmi context exists (D-032).
+  const evmReady = useRequireEvm()
+  if (!evmReady) return <main className="min-h-screen" />
+  return <MarketplaceInner />
+}
+
+function MarketplaceInner() {
   const { score, solanaScore } = useWalletStore()
   const { isConnected } = useAccount()
   const { connected: solConnected } = useWallet()

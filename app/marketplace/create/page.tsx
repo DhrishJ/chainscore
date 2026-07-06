@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import { useAccount } from 'wagmi'
 import { useWalletStore } from '@/lib/store'
+import { useRequireEvm } from '@/components/EvmGate'
 import { useSignMessage } from 'wagmi'
 import { ScoreBadge } from '@/components/ScoreBadge'
 import { calculateOfferedAPR } from '@/lib/apr'
@@ -13,6 +14,14 @@ import { useRouter } from 'next/navigation'
 const CURRENCIES = ['USDC', 'USDT', 'DAI', 'ETH', 'SOL']
 
 export default function CreateListingPage() {
+  // Wallet-dependent page: mount the deferred EVM subtree immediately and
+  // hold a shell until wagmi context exists (D-032).
+  const evmReady = useRequireEvm()
+  if (!evmReady) return <main className="min-h-screen" />
+  return <CreateListingInner />
+}
+
+function CreateListingInner() {
   const router = useRouter()
   const { address, isConnected } = useAccount()
   const { score } = useWalletStore()

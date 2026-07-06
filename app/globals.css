@@ -77,9 +77,22 @@ a {
   animation: cs-rise 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
+/* Above-the-fold variant: transform only, opacity never below 1. The home
+   hero h1 is the LCP element, and an opacity-gated entrance delays the LCP
+   paint by the animation duration on top of everything else (D-032). */
+@keyframes cs-rise-lcp {
+  from { transform: translateY(12px); }
+  to { transform: translateY(0); }
+}
+
+.cs-rise-lcp {
+  animation: cs-rise-lcp 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
 /* Reduced motion: reveals enhance an already-visible default, never gate it. */
 @media (prefers-reduced-motion: reduce) {
   .cs-rise,
+  .cs-rise-lcp,
   .cs-arc {
     animation: none;
   }

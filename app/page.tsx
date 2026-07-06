@@ -76,7 +76,7 @@ export default function Home() {
 
         <div className="relative mx-auto grid max-w-7xl items-center gap-14 px-6 pt-20 pb-20 lg:grid-cols-[1.05fr_1fr] lg:gap-10">
           {/* Left: copy + input */}
-          <div className="cs-rise text-center lg:text-left">
+          <div className="cs-rise-lcp text-center lg:text-left">
             <span className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1 text-xs font-medium text-text">
               <span className="h-1.5 w-1.5 rounded-full bg-success" />
               Onchain credit, for borrowers
@@ -106,7 +106,7 @@ export default function Home() {
           </div>
 
           {/* Right: product visual */}
-          <div className="cs-rise" style={{ animationDelay: '120ms' }}>
+          <div className="cs-rise-lcp" style={{ animationDelay: '120ms' }}>
             <ScoreGaugePreview />
           </div>
         </div>
