@@ -330,3 +330,41 @@ The next CSP ratchet step: promoting the report-only candidate
 [csp-report] log stream from real wallet flows is quiet (D-030). Rate
 limits, the score cache, and per-key ceilings are all durable via Upstash
 (D-031/D-033); the wallet stack is off the critical path (D-032).
+
+## 9. Autopilot agent layer (in progress, phase-gated)
+
+How the existing system fits together, and where the agent layer plugs in.
+
+**The existing loop.** Next.js App Router serves the site and the versioned
+partner API (`/api/v1`); scoring reads providers through the resilient ingest
+layer, evaluates v5-xgb-cal inline in TypeScript, applies integrity penalties
+downstream, and caches envelopes in Upstash under an in-memory L1. Postgres
+(Supabase, RLS-on) holds marketplace, auth-nonce, API-key, webhook, and
+feature-store tables. Deploys are manual `vercel --prod` after PR review; CI
+gates typecheck, lint, unit, e2e, a11y, secret scans, and critical-severity
+dependency audits.
+
+**Where agents plug in.** The agent layer is additive and sits beside the
+app, not inside the scoring path:
+
+- **State**: new Prisma tables in the same Postgres (facts_registry is live;
+  goals/kpis/tasks/sprints/decisions/agent_runs/agent_actions/outbox/
+  content_items land with the platform phase). RLS default-deny like every
+  other table; service role server-only.
+- **Facts Registry (G3)**: `facts_registry` + `lib/facts/` validator. Every
+  publish path must call the validator; content with a numeric claim that no
+  verified fact backs is rejected at the tool layer.
+- **Orchestrator**: a Vercel Cron route (nightly) plus an on-demand trigger,
+  dispatching to sub-agents via the agent-as-tool pattern. Config through
+  `lib/agents/config.ts` only: per-agent enable flags, a kill switch, and
+  spend caps (G2) that are code, not model judgment.
+- **Approval wall (G1)**: gated actions (spend, merge, prod deploy, config/
+  secret changes) are written to an `outbox` table as proposals; the
+  executing tool refuses anything without an approved status. Marketing
+  content deliberately does NOT pass a human gate; it passes the facts
+  validator and an anti-fraud check instead (G6).
+- **Surfaces**: an owner-only `/admin/autopilot` dashboard (approve/reject
+  outbox items, KPIs, audit trail) and an emailed digest.
+- **Hard exclusions**: no agent touches `ml/*`, `lib/data/mlScorer.ts`,
+  calibration, RLS/permissions, or secrets (G4/G8). Engineering-agent output
+  stops at a PR; humans merge and deploy.

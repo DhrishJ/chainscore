@@ -160,11 +160,11 @@ model BacktestRun {
 // Partner API keys (Workstream E). Only the SHA-256 hash is stored; the
 // plaintext is shown once at creation and never persisted.
 model ApiKey {
-  id              String    @id
+  id              String                @id
   name            String
-  keyHash         String    @unique
-  rateLimitPerMin Int       @default(60)
-  createdAt       DateTime  @default(now())
+  keyHash         String                @unique
+  rateLimitPerMin Int                   @default(60)
+  createdAt       DateTime              @default(now())
   lastUsedAt      DateTime?
   revokedAt       DateTime?
   webhooks        WebhookSubscription[]
@@ -201,15 +201,15 @@ model Entity {
 }
 
 model EntityMembership {
-  id         String   @id @default(cuid())
+  id         String    @id @default(cuid())
   entityId   String
   address    String
   chain      String
   // Confidence with which this address was attached to the entity.
   confidence Float
-  addedAt    DateTime @default(now())
+  addedAt    DateTime  @default(now())
   removedAt  DateTime?
-  entity     Entity   @relation(fields: [entityId], references: [id])
+  entity     Entity    @relation(fields: [entityId], references: [id])
 
   @@unique([entityId, address, chain])
   @@index([address])
@@ -218,15 +218,15 @@ model EntityMembership {
 // Append-only log of every merge and reversal, with the signals that drove
 // the decision, so any entity association is explainable after the fact.
 model MergeAudit {
-  id        String   @id @default(cuid())
-  entityId  String
-  action    String   // 'merge' | 'reverse'
-  addressA  String
-  addressB  String
+  id         String   @id @default(cuid())
+  entityId   String
+  action     String // 'merge' | 'reverse'
+  addressA   String
+  addressB   String
   confidence Float
-  signals   Json
-  createdAt DateTime @default(now())
-  entity    Entity   @relation(fields: [entityId], references: [id])
+  signals    Json
+  createdAt  DateTime @default(now())
+  entity     Entity   @relation(fields: [entityId], references: [id])
 }
 
 // Server-issued, single-use, expiring nonces for authenticated write actions.
@@ -277,4 +277,26 @@ enum LoanStatus {
   REPAID
   DEFAULTED
   LIQUIDATED
+}
+
+// ---- Autopilot: Facts Registry (G3) ----
+// The single source of truth for every metric ChainScore may state publicly.
+// The website and the marketing agent may only surface metrics that exist
+// here with verified = true; the pre-publish validator (lib/facts) enforces
+// it. value is the display form ("300 to 850", "7,720"); numericValue is the
+// machine-comparable magnitude the validator matches numbers against (null
+// for non-scalar facts like ranges, which use the aliases field instead).
+model FactsRegistry {
+  key          String   @id
+  value        String
+  numericValue Float?
+  unit         String?
+  definition   String
+  source       String
+  asOf         DateTime
+  verified     Boolean  @default(false)
+  updatedBy    String
+  updatedAt    DateTime @updatedAt
+
+  @@map("facts_registry")
 }

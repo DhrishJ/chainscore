@@ -3,6 +3,25 @@
 Running log of assumptions and decisions made during the rebuild. Newest first.
 Each entry: date, decision, reasoning, alternatives rejected.
 
+## 2026-07-06: Autopilot Phase 0 (Facts Registry)
+
+**D-034. The facts validator matches numbers; humans pin wording. Claims
+are stored as display value + machine magnitude.**
+A regex cannot judge that "analyzed" overstates what happened to 254,729
+ingested borrower records when only 40,000 were fully analyzed. So the
+enforcement split is: the validator guarantees no NUMBER appears publicly
+without a verified registry entry of matching magnitude (exact at displayed
+precision; percent claims match ratio-unit facts; "N+" lower bounds must be
+covered by a verified fact and not understate it by more than half), and
+the human-owned `definition` field pins the wording each number may carry,
+reconciled at Gate 0 via FACTS_TODO.md. Contested site claims (250K+
+borrowers analyzed, 8 networks, 25K+ liquidation events) are seeded as
+registry rows with verified=false, so the validator blocks them today
+rather than not knowing about them. The seed never overwrites a human's
+verified flag on re-run. Rejected: LLM-based claim checking as the primary
+gate (non-deterministic, not a control); allowing unregistered numbers
+below some "smallness" threshold (that is how inflation starts).
+
 ## 2026-07-05: Phase 6 (hardening)
 
 **D-033. Shared score cache as an L2 under the in-memory L1; per-key
