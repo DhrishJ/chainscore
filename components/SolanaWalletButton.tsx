@@ -1,4 +1,5 @@
 'use client'
+import { stylesForGrade } from '@/lib/site/scoreTier'
 import { useWallet } from '@solana/wallet-adapter-react'
 import { useWalletModal } from '@solana/wallet-adapter-react-ui'
 import { useEffect } from 'react'
@@ -6,12 +7,7 @@ import { useWalletStore } from '@/lib/store'
 import Link from 'next/link'
 
 function SolScorePill({ score, grade }: { score: number; grade: string }) {
-  const color =
-    grade === 'A' || grade === 'B'
-      ? 'text-accent border-accent/30 bg-accent/10'
-      : grade === 'C' || grade === 'D'
-      ? 'text-warning border-warning/30 bg-warning/10'
-      : 'text-danger border-danger/30 bg-danger/10'
+  const color = stylesForGrade(grade).pill
   return (
     <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium ${color}`}>
       {score} <span className="opacity-60">{grade}</span>

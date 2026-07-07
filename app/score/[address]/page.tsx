@@ -458,12 +458,31 @@ export default async function ScorePage({ params, searchParams }: Props) {
                   {typeof result.dataCompleteness === 'number' && result.dataCompleteness < 1 && (
                     <>
                       <span aria-hidden="true">·</span>
-                      <span className="text-warning" title={`Some data sources were degraded: ${(result.degradedSources ?? []).join(', ') || 'unknown'}`}>
+                      <span className="text-warning">
                         {Math.round(result.dataCompleteness * 100)}% data completeness
                       </span>
                     </>
                   )}
                 </div>
+                {/* Degraded-state notice (Phase 6): the coverage table promises
+                    we say so when data is thinner; a hover tooltip is not
+                    saying so. Visible, named sources, no hiding. */}
+                {typeof result.dataCompleteness === 'number' && result.dataCompleteness < 1 && (
+                  <div className="mt-3 flex items-start gap-2.5 rounded-lg border border-warning/40 bg-warning/10 px-3.5 py-2.5">
+                    <span className="mt-1 h-1.5 w-1.5 flex-none rounded-full bg-warning" aria-hidden />
+                    <p className="text-xs leading-relaxed text-text">
+                      Reduced data coverage on this score
+                      {(result.degradedSources ?? []).length > 0 && (
+                        <>
+                          {' '}
+                          ({(result.degradedSources ?? []).join(', ')})
+                        </>
+                      )}
+                      . The model saw less history than usual; treat the score with wider error
+                      bars.
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           </div>

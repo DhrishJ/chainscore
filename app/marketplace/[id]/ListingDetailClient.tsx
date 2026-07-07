@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import { useAccount, useSignMessage } from 'wagmi'
 import { useWalletStore } from '@/lib/store'
+import { gradeForScore } from '@/lib/site/scoreTier'
 import { useRequireEvm } from '@/components/EvmGate'
 import { ScoreBadge } from '@/components/ScoreBadge'
 import { ScoreGauge } from '@/components/ScoreGauge'
@@ -53,13 +54,7 @@ interface Listing {
   applications: Application[]
 }
 
-function gradeFromScore(s: number) {
-  if (s >= 750) return 'A'
-  if (s >= 650) return 'B'
-  if (s >= 550) return 'C'
-  if (s >= 450) return 'D'
-  return 'F'
-}
+
 
 export function ListingDetailClient({ listing }: { listing: Listing }) {
   // Wallet-dependent page: mount the deferred EVM subtree immediately and
