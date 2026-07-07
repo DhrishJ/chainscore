@@ -25,19 +25,25 @@ const jetbrainsMono = JetBrains_Mono({
 })
 
 export const metadata: Metadata = {
-  title: 'ChainScore | Onchain Credit Scores and Lending Marketplace',
+  title: {
+    default: 'ChainScore | Onchain Credit Risk API for DeFi Lending',
+    template: '%s | ChainScore',
+  },
   description:
-    'Free onchain credit scoring for any wallet, plus a lending marketplace. A single 300 to 850 score read from public chain history across 8 networks. No KYC required.',
+    'Credit risk infrastructure for onchain lending. A 300 to 850 borrower score with calibrated default probability and a published backtest, from public chain history on 7 EVM networks plus Solana. No KYC.',
   metadataBase: new URL(clientEnv.NEXT_PUBLIC_APP_URL || 'https://chainscore.dev'),
+  alternates: { canonical: '/' },
   openGraph: {
-    title: 'ChainScore | Onchain Credit Scores and Lending Marketplace',
-    description: 'Score any wallet, then lend or borrow with reputation you can verify.',
+    title: 'ChainScore | Onchain Credit Risk API for DeFi Lending',
+    description:
+      'Price borrower risk from real onchain history. Scores, calibrated default probability, and a published backtest via one API.',
     type: 'website',
+    siteName: 'ChainScore',
   },
   twitter: {
     card: 'summary_large_image',
     title: 'ChainScore',
-    description: 'Onchain credit scores and a reputation based lending marketplace.',
+    description: 'Onchain borrower credit scores with a published backtest. Built for DeFi underwriting.',
   },
 }
 

@@ -14,10 +14,12 @@ const dotX = 120 + 100 * Math.cos(angle)
 const dotY = 120 - 100 * Math.sin(angle)
 
 const factors = [
-  { label: 'Repayment history', value: 92 },
-  { label: 'Wallet age', value: 86 },
-  { label: 'Transaction consistency', value: 81 },
-  { label: 'DeFi protocol usage', value: 74 },
+  // The model's real factor groups (lib/site/publicFacts). Values are an
+  // illustrative example, labeled as such below the card.
+  { label: 'Lending History', value: 92 },
+  { label: 'Wallet History', value: 86 },
+  { label: 'DeFi Activity', value: 74 },
+  { label: 'Portfolio & Identity', value: 81 },
 ]
 
 export function ScoreGaugePreview() {
@@ -77,7 +79,7 @@ export function ScoreGaugePreview() {
           </div>
         </div>
 
-        <p className="mt-2 text-center text-xs text-muted">Score range {MIN} to {MAX}</p>
+        <p className="mt-2 text-center text-xs text-muted">Illustrative example. Score range {MIN} to {MAX}</p>
 
         {/* factor breakdown */}
         <div className="mt-6 space-y-3">

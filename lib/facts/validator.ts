@@ -83,11 +83,21 @@ export function extractNumericClaims(text: string): NumericClaim[] {
   return claims
 }
 
+// A lower bound ("20K+", "250K+") is honest only when it is EXACTLY some
+// verified fact floored at the bound's own precision: 254,729 floors to
+// 250K (two significant digits, granularity 10^4) and 20,717 floors to 20K,
+// but nothing floors to 25K. This stops a big unrelated fact from
+// laundering an untraceable bound.
+function boundBackedBy(bound: number, factValue: number): boolean {
+  if (factValue < bound || bound <= 0) return false
+  const sigDigits = String(Math.round(bound)).replace(/0+$/, '').length
+  const granularity = Math.pow(10, Math.floor(Math.log10(bound)) - (sigDigits - 1))
+  return Math.floor(factValue / granularity) * granularity === bound
+}
+
 // A claim is backed when a verified fact's magnitude matches it at the
 // precision the claim displays. Percent claims also match ratio-unit facts
-// (fact 0.8815 backs "88%"). Lower-bound claims ("20K+") are backed when a
-// verified fact is at least the bound and the bound is not understated by
-// more than half (so "1+ wallets" cannot launder a big-sounding nothing).
+// (fact 0.8815 backs "88%").
 function claimBacked(claim: NumericClaim, facts: FactRecord[]): boolean {
   for (const fact of facts) {
     if (!fact.verified || fact.numericValue === null) continue
@@ -96,7 +106,7 @@ function claimBacked(claim: NumericClaim, facts: FactRecord[]): boolean {
 
     for (const candidate of candidates) {
       if (claim.isLowerBound) {
-        if (candidate >= claim.magnitude && claim.magnitude >= candidate * 0.5) return true
+        if (boundBackedBy(claim.magnitude, candidate)) return true
         continue
       }
       // Match at the claim's displayed precision: "88" backs 88.15; "0.849"
