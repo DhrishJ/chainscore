@@ -5,6 +5,7 @@ import { sendDigest } from '@/lib/agents/digest'
 // Side-effect imports: each agent module registers itself with the
 // orchestrator. Dispatch still respects per-agent enable flags.
 import '@/lib/agents/strategy'
+import '@/lib/agents/marketing'
 
 // Orchestrator entry point. Two callers:
 //  - Vercel Cron (vercel.json), which sends Authorization: Bearer CRON_SECRET
