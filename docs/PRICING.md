@@ -59,11 +59,64 @@ cents per active developer per month, which is cheap acquisition.
 - The pricing page renders lib/pricing/plans.ts directly; it cannot drift
   from what metering enforces.
 
-## 4. Deliberately not built yet
+## 4. Stripe billing: drafted, not live
 
-- Stripe billing: drafted as an Engineering-agent PR in Phase 3; a human
-  holds the keys and flips go-live (G1/G4). Until then, manual invoicing
-  against UsageRecord rollups.
+Starter and Growth are meant to be self-serve: a customer picks a plan,
+pays through Stripe Checkout, and their `Subscription` row (planId, status)
+updates itself from Stripe's webhooks. That flow is drafted in code
+(`lib/billing/stripe.ts`, `app/api/billing/webhook/route.ts`) but is inert
+in every environment until a human supplies real Stripe keys; nothing
+about this draft changes current behavior.
+
+**Why it is safe to ship un-keyed:** `billingEnabled()` returns `false`
+whenever `STRIPE_SECRET_KEY` or `STRIPE_WEBHOOK_SECRET` is absent from
+`process.env`. The checkout helper returns `null` when disabled, and the
+webhook route returns `503` when disabled, before touching the database or
+the network. No `stripe` npm dependency was added: checkout sessions are
+created with a direct Stripe REST API call, and webhook signatures are
+verified with `node:crypto`, both by hand, matching Stripe's documented
+algorithm (`HMAC-SHA256` over `"${timestamp}.${rawBody}"`, compared in
+constant time, with a 300 second replay tolerance).
+
+**The flow, once a human supplies keys:**
+1. A partner calls `createCheckoutUrl(planId, apiKeyId)` for `starter` or
+   `growth` (the only self-serve plans; `free` has nothing to charge and
+   `enterprise` is negotiated). This builds a Stripe Checkout Session
+   using inline `price_data` from `lib/pricing/plans.ts` (so no
+   per-plan Stripe Price IDs need to exist yet) and stamps `apiKeyId` and
+   `planId` into both the session metadata and the resulting
+   subscription's metadata.
+2. The partner completes payment on Stripe's hosted page.
+3. Stripe calls `POST /api/billing/webhook` with `checkout.session.completed`.
+   The route verifies the signature, then upserts
+   `Subscription { apiKeyId, planId, status: "active" }` (`overageCapUsd`
+   is left at its schema default; billing does not manage the customer's
+   overage cap).
+4. Later `customer.subscription.updated` / `.deleted` events (renewals,
+   payment failures, cancellations) update the same row's `status`
+   (`.deleted` forces `"canceled"`). Events missing ChainScore's own
+   `apiKeyId`/`planId` metadata, or of a type this integration does not
+   react to, are acknowledged with `200` and otherwise ignored: Stripe
+   retries on non-2xx, and most event types (invoices, disputes, etc.)
+   are not this integration's concern yet.
+
+**What a human must still do before this can go live** (none of this is
+attempted by this draft; `lib/env.server.ts`, Prisma, and CI are protected
+paths for the agent that wrote it):
+- Register `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` as optional
+  strings in the `lib/env.server.ts` schema, matching the convention used
+  for the other optional integration keys there.
+- Create the Stripe account and a webhook endpoint pointed at
+  `/api/billing/webhook`; copy both values into the deployment
+  environment.
+- Decide whether to keep inline `price_data` (simplest, no extra env vars)
+  or move to pre-created Stripe Price objects (better Stripe-side
+  reporting) before launch.
+- Wire `createCheckoutUrl` into an actual "Upgrade" action in the
+  dashboard; today it is a tested library function with no UI caller.
+
+## 5. Other things deliberately not built yet
+
 - Per-plan rate limits wired to the middleware mirror (plans carry
   rateLimitPerMin; the ApiKey row is still authoritative for now; unify
   when subscriptions get a management UI).
@@ -72,7 +125,7 @@ cents per active developer per month, which is cheap acquisition.
 - Value-based pricing (basis points on underwritten volume): explicitly
   deferred until integrations exist. Noted, not built.
 
-## 5. Regulatory note (for the human, restated from the brief)
+## 6. Regulatory note (for the human, restated from the brief)
 
 Usage-based API pricing is straightforward. If the P2P marketplace stays
 and ChainScore ever touches funds or takes a cut of matched loans, that is
