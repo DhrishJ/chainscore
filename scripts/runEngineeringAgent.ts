@@ -67,11 +67,32 @@ async function main(): Promise<void> {
     })
     throw e
   } finally {
-    // Always return the runner to master so the next run starts clean.
+    // Return the runner to a CLEAN master no matter how the run ended
+    // (lesson from the first failed run, which carried an abandoned task's
+    // uncommitted files back to master). Anything worth keeping was pushed
+    // with the PR; local leftovers of a failed run are debris by definition.
     try {
+      const dirty = execFileSync('git', ['status', '--porcelain'], { cwd: repoRoot }).toString().trim()
+      if (dirty) {
+        execFileSync('git', ['reset', '--hard'], { cwd: repoRoot })
+        execFileSync('git', ['clean', '-fd'], { cwd: repoRoot })
+        console.log('Runner reset a dirty tree left by the run.')
+      }
       execFileSync('git', ['checkout', 'master'], { cwd: repoRoot })
-    } catch {
-      // leave as-is; the human will see the branch state
+      // Prune the agent branch when it never produced a PR.
+      const branches = execFileSync('git', ['branch', '--list', 'agent/*'], { cwd: repoRoot })
+        .toString()
+        .split('\n')
+        .map((b) => b.replace('*', '').trim())
+        .filter(Boolean)
+      for (const b of branches) {
+        const pushed = execFileSync('git', ['ls-remote', '--heads', 'origin', b], { cwd: repoRoot })
+          .toString()
+          .trim()
+        if (!pushed) execFileSync('git', ['branch', '-D', b], { cwd: repoRoot })
+      }
+    } catch (cleanupError) {
+      console.error('Runner cleanup incomplete:', cleanupError)
     }
     await prisma.$disconnect()
   }

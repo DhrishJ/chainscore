@@ -25,7 +25,7 @@ export default async function AutopilotDashboard({
 }: {
   searchParams: { refused?: string }
 }) {
-  const [pending, recentDecided, runs, kpis] = await Promise.all([
+  const [pending, recentDecided, runs, kpis, content] = await Promise.all([
     prisma.outboxItem.findMany({ where: { status: 'PENDING' }, orderBy: { createdAt: 'asc' }, take: 50 }),
     prisma.outboxItem.findMany({
       where: { status: { in: ['APPROVED', 'REJECTED', 'EXECUTED', 'FAILED'] } },
@@ -34,6 +34,7 @@ export default async function AutopilotDashboard({
     }),
     prisma.agentRun.findMany({ orderBy: { startedAt: 'desc' }, take: 25 }),
     prisma.kpi.findMany({ orderBy: { key: 'asc' } }),
+    prisma.contentItem.findMany({ orderBy: { createdAt: 'desc' }, take: 20 }),
   ])
 
   const caps = spendCaps()
@@ -166,6 +167,45 @@ export default async function AutopilotDashboard({
                   <td className="max-w-md truncate px-4 py-2 text-xs text-muted">
                     {r.summary ?? r.error ?? ''}
                   </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section className="mt-10">
+        <h2 className="font-grotesk text-lg font-semibold text-text">Content pipeline</h2>
+        <p className="mt-1 text-xs text-muted">
+          Marketing publishes autonomously; BLOCKED rows show the truth and fraud brakes firing.
+          GENERATED means passed all checks, waiting on a channel or its calendar date.
+        </p>
+        <div className="mt-3 overflow-x-auto rounded-xl border border-border">
+          <table className="w-full text-left text-sm">
+            <thead className="bg-card text-xs text-muted">
+              <tr>
+                <th className="px-4 py-2">Status</th>
+                <th className="px-4 py-2">Channel</th>
+                <th className="px-4 py-2">Scheduled</th>
+                <th className="px-4 py-2">Title</th>
+              </tr>
+            </thead>
+            <tbody>
+              {content.length === 0 && (
+                <tr>
+                  <td colSpan={4} className="px-4 py-6 text-center text-muted">
+                    No content yet.
+                  </td>
+                </tr>
+              )}
+              {content.map((c) => (
+                <tr key={c.id} className="border-t border-border">
+                  <td className="px-4 py-2 font-mono text-xs">{c.status}</td>
+                  <td className="px-4 py-2 text-xs">{c.channel}</td>
+                  <td className="px-4 py-2 text-xs text-muted">
+                    {c.scheduledFor?.toISOString().slice(5, 10) ?? ''}
+                  </td>
+                  <td className="max-w-md truncate px-4 py-2 text-xs">{c.title ?? c.body.slice(0, 60)}</td>
                 </tr>
               ))}
             </tbody>
