@@ -483,3 +483,30 @@ model ContentItem {
   @@index([channel, status])
   @@map("content_items")
 }
+
+// ---- Pricing: plans are code config (lib/pricing/plans.ts); these tables
+// hold who is on what plan and what they used ----
+
+model Subscription {
+  id            String   @id @default(cuid())
+  apiKeyId      String   @unique
+  planId        String   @default("free")
+  overageCapUsd Float    @default(50)
+  status        String   @default("active")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("subscriptions")
+}
+
+model UsageRecord {
+  id         String   @id @default(cuid())
+  apiKeyId   String
+  period     String
+  scores     Int      @default(0)
+  overageUsd Float    @default(0)
+  updatedAt  DateTime @updatedAt
+
+  @@unique([apiKeyId, period])
+  @@map("usage_records")
+}
