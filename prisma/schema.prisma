@@ -467,18 +467,19 @@ model OutboxItem {
 }
 
 model ContentItem {
-  id          String        @id @default(cuid())
-  channel     String
-  status      ContentStatus @default(IDEA)
-  title       String?
-  body        String
-  factKeys    String?
-  utm         String?
-  externalId  String?
-  metricsJson String?
-  postedAt    DateTime?
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  id           String        @id @default(cuid())
+  channel      String
+  status       ContentStatus @default(IDEA)
+  title        String?
+  body         String
+  factKeys     String?
+  utm          String?
+  externalId   String?
+  metricsJson  String?
+  scheduledFor DateTime?
+  postedAt     DateTime?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
 
   @@index([channel, status])
   @@map("content_items")
