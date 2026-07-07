@@ -3,6 +3,7 @@ import { ConnectButton } from '@rainbow-me/rainbowkit'
 import { useAccount } from 'wagmi'
 import { useEffect } from 'react'
 import { useWalletStore } from '@/lib/store'
+import { stylesForGrade } from '@/lib/site/scoreTier'
 import Link from 'next/link'
 
 // The wagmi/RainbowKit half of the navbar connect button. Must only be
@@ -10,12 +11,7 @@ import Link from 'next/link'
 // would pull the whole EVM wallet tree back onto the critical path (D-032).
 
 function ScorePill({ score, grade }: { score: number; grade: string }) {
-  const color =
-    grade === 'A' || grade === 'B'
-      ? 'text-accent border-accent/30 bg-accent/10'
-      : grade === 'C' || grade === 'D'
-      ? 'text-warning border-warning/30 bg-warning/10'
-      : 'text-danger border-danger/30 bg-danger/10'
+  const color = stylesForGrade(grade).pill
 
   return (
     <span

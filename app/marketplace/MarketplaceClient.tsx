@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import { useAccount } from 'wagmi'
 import { useWallet } from '@solana/wallet-adapter-react'
 import { useWalletStore } from '@/lib/store'
+import { gradeForScore } from '@/lib/site/scoreTier'
 import { useRequireEvm } from '@/components/EvmGate'
 import { ScoreBadge } from '@/components/ScoreBadge'
 import Link from 'next/link'
@@ -35,13 +36,7 @@ const SORT_OPTIONS = [
   { value: 'amount', label: 'Highest Amount' },
 ]
 
-function gradeFromScore(score: number): string {
-  if (score >= 750) return 'A'
-  if (score >= 650) return 'B'
-  if (score >= 550) return 'C'
-  if (score >= 450) return 'D'
-  return 'F'
-}
+
 
 function timeRemaining(expiresAt: string): string {
   const diff = new Date(expiresAt).getTime() - Date.now()
@@ -250,7 +245,7 @@ function MarketplaceInner() {
         {!loading && listings.length > 0 && (
           <div className="grid gap-4">
             {listings.map((listing) => {
-              const grade = gradeFromScore(listing.lenderScore)
+              const grade = gradeForScore(listing.lenderScore)
               const isSolanaListing = (listing as unknown as { chain?: string }).chain === 'SOLANA'
               const scoreTooLow =
                 borrowerScore != null && borrowerScore < listing.minBorrowerScore

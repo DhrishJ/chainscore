@@ -1,6 +1,8 @@
 import Link from 'next/link'
 import { addressParamSchema } from '@/lib/validation'
 import { clientEnv } from '@/lib/env.client'
+import { stylesForGrade } from '@/lib/site/scoreTier'
+const pillFor = (grade: string): string => stylesForGrade(grade).pill
 
 // NOTE: this route intentionally relies on the global `X-Frame-Options:
 // SAMEORIGIN` header set in next.config.js and does not override it here.
@@ -27,18 +29,7 @@ function tierLabel(grade: string): string {
   }
 }
 
-function tierClasses(grade: string): string {
-  switch (grade) {
-    case 'A':
-    case 'B':
-      return 'text-accent border-accent/30 bg-accent/10'
-    case 'C':
-    case 'D':
-      return 'text-warning border-warning/30 bg-warning/10'
-    default:
-      return 'text-danger border-danger/30 bg-danger/10'
-  }
-}
+
 
 async function getScore(address: string): Promise<ScoreResult | null> {
   const base = clientEnv.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
@@ -94,7 +85,7 @@ export default async function EmbedPage({
                 {score.score}
               </span>
               <span
-                className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${tierClasses(score.grade)}`}
+                className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${pillFor(score.grade)}`}
               >
                 {score.grade} · {tierLabel(score.grade)}
               </span>

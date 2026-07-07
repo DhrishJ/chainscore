@@ -1,4 +1,5 @@
 import { cn } from '@/lib/utils'
+import { stylesForGrade } from '@/lib/site/scoreTier'
 
 interface ScoreBadgeProps {
   score: number
@@ -8,12 +9,7 @@ interface ScoreBadgeProps {
 }
 
 export function ScoreBadge({ score, grade, size = 'md', className }: ScoreBadgeProps) {
-  const color =
-    grade === 'A' ? 'text-accent border-accent/30 bg-accent/10' :
-    grade === 'B' ? 'text-accent border-accent/30 bg-accent/10' :
-    grade === 'C' ? 'text-warning border-warning/30 bg-warning/10' :
-    grade === 'D' ? 'text-warning border-warning/30 bg-warning/10' :
-    'text-danger border-danger/30 bg-danger/10'
+  const color = stylesForGrade(grade).pill
 
   const sizeClass =
     size === 'sm' ? 'text-xs px-2 py-0.5' :
