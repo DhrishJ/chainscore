@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { env } from '@/lib/env.server'
 import { runOrchestrator, productionDeps } from '@/lib/agents/orchestrator'
 import { sendDigest } from '@/lib/agents/digest'
+// Side-effect imports: each agent module registers itself with the
+// orchestrator. Dispatch still respects per-agent enable flags.
+import '@/lib/agents/strategy'
 
 // Orchestrator entry point. Two callers:
 //  - Vercel Cron (vercel.json), which sends Authorization: Bearer CRON_SECRET
