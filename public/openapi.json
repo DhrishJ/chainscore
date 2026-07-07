@@ -21,6 +21,7 @@
   ],
   "tags": [
     { "name": "score", "description": "Wallet credit score envelope" },
+    { "name": "usage", "description": "Billing-period usage lookup" },
     { "name": "webhooks", "description": "Score-change webhook subscriptions" }
   ],
   "paths": {
@@ -101,6 +102,47 @@
           },
           "501": {
             "description": "Solana scoring is not available on the v1 API yet.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/usage": {
+      "get": {
+        "operationId": "getUsage",
+        "tags": ["usage"],
+        "summary": "Get the caller's current billing-period usage",
+        "description": "Returns the caller's plan, quota, and usage for the current calendar month. Read-only: checking usage never counts against it.",
+        "responses": {
+          "200": {
+            "description": "Usage summary.",
+            "headers": {
+              "X-RateLimit-Remaining": { "$ref": "#/components/headers/XRateLimitRemaining" }
+            },
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/UsageSummary" } }
+            }
+          },
+          "401": {
+            "description": "Missing, malformed, or invalid API key.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } }
+            }
+          },
+          "403": {
+            "description": "API key has been revoked.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded for this API key.",
+            "headers": {
+              "Retry-After": { "$ref": "#/components/headers/RetryAfter" },
+              "X-RateLimitRemaining": { "$ref": "#/components/headers/XRateLimitRemaining" }
+            },
             "content": {
               "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } }
             }
@@ -300,6 +342,28 @@
           "computedAt": { "type": "string", "format": "date-time" },
           "cached": { "type": "boolean" },
           "stale": { "type": "boolean" }
+        }
+      },
+      "UsageSummary": {
+        "type": "object",
+        "description": "The caller's plan, quota, and usage for the current calendar month.",
+        "required": [
+          "plan",
+          "period",
+          "used",
+          "quota",
+          "overagePerScoreUsd",
+          "overageCapUsd",
+          "remaining"
+        ],
+        "properties": {
+          "plan": { "type": "string", "enum": ["free", "starter", "growth", "enterprise"] },
+          "period": { "type": "string", "description": "Calendar month, YYYY-MM.", "example": "2026-07" },
+          "used": { "type": "integer", "minimum": 0, "description": "Scores counted against quota so far this period." },
+          "quota": { "type": "integer", "minimum": 0, "description": "Included scores per month for this plan." },
+          "overagePerScoreUsd": { "type": ["number", "null"], "description": "Per-score overage price beyond quota, or null if the plan has no overage." },
+          "overageCapUsd": { "type": "number", "minimum": 0, "description": "The subscription's monthly overage spend cap." },
+          "remaining": { "type": "integer", "minimum": 0, "description": "max(quota - used, 0). Usage beyond quota is billed as overage, not reflected here." }
         }
       },
       "CreateWebhookRequest": {

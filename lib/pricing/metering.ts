@@ -1,5 +1,5 @@
 import { env } from '@/lib/env.server'
-import { estimateOverageUsd, type Plan } from './plans'
+import { estimateOverageUsd, type Plan, type PlanId } from './plans'
 
 // Usage metering for the partner API (Section 9). One Redis INCR per scored
 // request on a per-key monthly counter, then a pure quota decision:
@@ -83,5 +83,60 @@ export async function meterScore(
   } catch (e) {
     console.error(`[metering] failed open (${e instanceof Error ? e.name : 'error'})`)
     return { allowed: true, used: 0, quota: plan.scoresPerMonth, overageUsd: 0 }
+  }
+}
+
+// Read-only usage lookup for GET /api/v1/usage. A plain GET, never an INCR:
+// checking usage must not itself count as usage. Same fail-open posture as
+// meterScore: a Redis outage reports zero rather than 500ing the endpoint.
+export async function getCurrentUsage(keyHashPrefix: string, period = usagePeriod()): Promise<number> {
+  const config = redisConfig()
+  if (!config) return 0
+  try {
+    const key = usageRedisKey(keyHashPrefix, period)
+    const response = await fetch(config.url.replace(/\/+$/, ''), {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${config.token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(['GET', key]),
+      signal: AbortSignal.timeout(1000),
+    })
+    if (!response.ok) throw new Error(`upstash http ${response.status}`)
+    const { result } = (await response.json()) as { result?: unknown }
+    if (result === null || result === undefined) return 0
+    const parsed = typeof result === 'number' ? result : Number.parseInt(String(result), 10)
+    return Number.isFinite(parsed) && parsed >= 0 ? parsed : 0
+  } catch (e) {
+    console.error(`[metering] usage read failed open (${e instanceof Error ? e.name : 'error'})`)
+    return 0
+  }
+}
+
+export interface UsageSummary {
+  plan: PlanId
+  period: string
+  used: number
+  quota: number
+  overagePerScoreUsd: number | null
+  overageCapUsd: number
+  remaining: number
+}
+
+// Pure: assembles the GET /api/v1/usage response body from an already-read
+// usage count. Remaining never goes negative; overage beyond quota is billed,
+// not "remaining" quota.
+export function usageSummary(
+  plan: Plan,
+  used: number,
+  overageCapUsd: number,
+  period = usagePeriod()
+): UsageSummary {
+  return {
+    plan: plan.id,
+    period,
+    used,
+    quota: plan.scoresPerMonth,
+    overagePerScoreUsd: plan.overagePerScoreUsd,
+    overageCapUsd,
+    remaining: Math.max(0, plan.scoresPerMonth - used),
   }
 }
