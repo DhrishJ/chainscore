@@ -25,7 +25,7 @@ export function Navbar() {
           </Link>
           <div className="hidden sm:flex items-center gap-4 text-sm text-muted">
             <Link href="/marketplace" className="hover:text-text transition-colors">
-              Marketplace
+              Marketplace (preview)
             </Link>
             <Link href="/dashboard" className="hover:text-text transition-colors">
               Dashboard
@@ -55,7 +55,7 @@ export function Navbar() {
       {mobileOpen && (
         <div className="sm:hidden border-t border-border bg-background px-4 py-3 flex flex-col gap-3 text-sm text-muted">
           <Link href="/marketplace" className="hover:text-text transition-colors" onClick={() => setMobileOpen(false)}>
-            Marketplace
+            Marketplace (preview)
           </Link>
           <Link href="/dashboard" className="hover:text-text transition-colors" onClick={() => setMobileOpen(false)}>
             Dashboard
