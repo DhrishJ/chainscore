@@ -210,3 +210,31 @@ wallet it has no cached history for.
 - **Disabling all partner API traffic fast**: there is no global kill switch
   today; the nearest equivalent is revoking every active `ApiKey` row, or
   rolling back the deployment.
+
+## Operating the Autopilot agents
+
+- **Kill switch**: set `AGENTS_KILL_SWITCH=true` (Vercel env + redeploy) to
+  halt every agent at the orchestrator. The dashboard header shows it.
+- **Enable flags**: `AGENT_STRATEGY_ENABLED`, `AGENT_MARKETING_ENABLED`
+  ('true' each). Disabled agents keep their queue; nothing is lost.
+- **Dashboard**: `/admin/autopilot`, cookie login with `ADMIN_DASH_TOKEN`.
+  Approve or reject outbox items there; nothing gated executes without it.
+- **Nightly cron**: Vercel hits `/api/agents/cron` at 03:00 UTC with
+  `CRON_SECRET`. Manual trigger: same route with the admin cookie.
+- **Engineering agent** (local machine only, needs git + gh):
+  `node --env-file=.env.local --import tsx scripts/runEngineeringAgent.ts [taskId]`
+  from a clean master. Always pass an explicit taskId for anything sized
+  larger than a small endpoint; queue order picks the oldest priority-1
+  task otherwise. The runner resets the tree and prunes unpushed agent
+  branches on failure.
+- **Marketing channels**: light up automatically when their keys exist
+  (`NEYNAR_API_KEY`, `RESEND_API_KEY`, X keys). Until then content lands
+  as GENERATED, ready to post. Add real social profile URLs to
+  `components/StructuredData.tsx` sameAs the same day accounts exist.
+- **Facts Registry**: add or verify facts with `scripts/seedFacts.ts` as
+  the template; a human flipping `verified` in the DB is never overwritten
+  by the seed. Content referencing unverified numbers is blocked at
+  publish, by design.
+- **Costs**: every agent run logs tokens and dollars to `agent_runs`;
+  the dashboard and nightly digest show them. Strategy ~$0.20/run,
+  marketing ~$0.30/run, engineering $1-8/task depending on size.
