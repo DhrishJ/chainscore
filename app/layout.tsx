@@ -3,6 +3,7 @@ import { Space_Grotesk, Inter, JetBrains_Mono } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import { Providers } from '@/components/Providers'
 import { Navbar } from '@/components/Navbar'
+import { StructuredData } from '@/components/StructuredData'
 import { clientEnv } from '@/lib/env.client'
 import './globals.css'
 
@@ -56,6 +57,7 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning className={`${spaceGrotesk.variable} ${inter.variable} ${jetbrainsMono.variable}`}>
       <head>
         <script dangerouslySetInnerHTML={{ __html: `(function(){try{var t=localStorage.getItem('cs-theme');if(t==='dark')document.documentElement.classList.add('dark');}catch(e){}})();` }} />
+        <StructuredData />
       </head>
       <body className="min-h-screen bg-background font-sans text-text antialiased">
         <Providers>
