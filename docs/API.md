@@ -50,6 +50,48 @@ curl -s \
 Errors: `400` invalid address, `401` auth failure, `403` revoked key, `429`
 rate limited, `501` chain not yet supported (currently `solana`).
 
+## GET /api/v1/usage
+
+Returns the caller's current billing-period usage. Read-only: calling this
+endpoint checks your usage, it never counts against it (the underlying Redis
+counter is read, not incremented).
+
+No parameters. The plan and overage cap come from the key's subscription; a
+key with no subscription row is treated as the free plan, the same
+convention `/api/v1/score` uses.
+
+```bash
+curl -s \
+  -H "Authorization: Bearer $CHAINSCORE_API_KEY" \
+  "https://chainscore.dev/api/v1/usage"
+```
+
+Response (`200`):
+
+```json
+{
+  "plan": "starter",
+  "period": "2026-07",
+  "used": 4213,
+  "quota": 10000,
+  "overagePerScoreUsd": 0.012,
+  "overageCapUsd": 50,
+  "remaining": 5787
+}
+```
+
+- `plan`: the plan id (`free`, `starter`, `growth`, `enterprise`).
+- `period`: calendar month the counts apply to, `YYYY-MM`.
+- `used`: scores counted against quota so far this period.
+- `quota`: included scores per month for this plan.
+- `overagePerScoreUsd`: per-score overage price once `used` exceeds `quota`,
+  or `null` if the plan has no overage (a hard stop at quota, e.g. free).
+- `overageCapUsd`: the subscription's monthly overage spend cap.
+- `remaining`: `max(quota - used, 0)`. Usage beyond quota is billed as
+  overage rather than reflected here.
+
+Errors: `401` auth failure, `403` revoked key, `429` rate limited.
+
 ## POST /api/v1/webhooks
 
 Registers an HTTPS callback that ChainScore notifies when the watched

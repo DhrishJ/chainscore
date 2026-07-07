@@ -1,6 +1,13 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { PLANS, estimateOverageUsd, planFor } from '@/lib/pricing/plans'
-import { decideQuota, meterScore, usagePeriod, usageRedisKey } from '@/lib/pricing/metering'
+import {
+  decideQuota,
+  meterScore,
+  usagePeriod,
+  usageRedisKey,
+  getCurrentUsage,
+  usageSummary,
+} from '@/lib/pricing/metering'
 
 afterEach(() => vi.unstubAllGlobals())
 
@@ -103,5 +110,79 @@ describe('meterScore', () => {
     const d = await meterScore('abcd1234', PLANS.free, 50)
     expect(d.allowed).toBe(true)
     expect(d.used).toBe(0)
+  })
+})
+
+describe('getCurrentUsage', () => {
+  it('reads the count with a GET, not an INCR, and never mutates it', async () => {
+    vi.stubEnv('UPSTASH_REDIS_REST_URL', 'https://fake.upstash.io')
+    vi.stubEnv('UPSTASH_REDIS_REST_TOKEN', 'token')
+    vi.resetModules()
+    const { getCurrentUsage: freshGetUsage } = await import('@/lib/pricing/metering')
+    let capturedBody: string | undefined
+    const fakeFetch = vi.fn(async (_url: string | URL | Request, init?: RequestInit) => {
+      capturedBody = init?.body as string
+      return { ok: true, json: async () => ({ result: '42' }) }
+    })
+    vi.stubGlobal('fetch', fakeFetch as unknown as typeof fetch)
+    const used = await freshGetUsage('abcd1234', '2026-07')
+    expect(used).toBe(42)
+    expect(JSON.parse(capturedBody ?? '[]')).toEqual(['GET', 'usage:abcd1234:2026-07'])
+    vi.unstubAllEnvs()
+  })
+
+  it('reports zero when the key has never been incremented (nil reply)', async () => {
+    vi.stubEnv('UPSTASH_REDIS_REST_URL', 'https://fake.upstash.io')
+    vi.stubEnv('UPSTASH_REDIS_REST_TOKEN', 'token')
+    vi.resetModules()
+    const { getCurrentUsage: freshGetUsage } = await import('@/lib/pricing/metering')
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({ ok: true, json: async () => ({ result: null }) })) as unknown as typeof fetch
+    )
+    const used = await freshGetUsage('abcd1234')
+    expect(used).toBe(0)
+    vi.unstubAllEnvs()
+  })
+
+  it('fails open to zero when Redis is unreachable', async () => {
+    vi.stubEnv('UPSTASH_REDIS_REST_URL', 'https://fake.upstash.io')
+    vi.stubEnv('UPSTASH_REDIS_REST_TOKEN', 'token')
+    vi.resetModules()
+    const { getCurrentUsage: freshGetUsage } = await import('@/lib/pricing/metering')
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => {
+        throw new Error('down')
+      }) as unknown as typeof fetch
+    )
+    const used = await freshGetUsage('abcd1234')
+    expect(used).toBe(0)
+    vi.unstubAllEnvs()
+  })
+
+  it('reports zero when no Redis is configured at all', async () => {
+    const used = await getCurrentUsage('abcd1234')
+    expect(used).toBe(0)
+  })
+})
+
+describe('usageSummary', () => {
+  it('assembles the usage response body from plan config and a usage count', () => {
+    const summary = usageSummary(PLANS.starter, 4_000, 50, '2026-07')
+    expect(summary).toEqual({
+      plan: 'starter',
+      period: '2026-07',
+      used: 4_000,
+      quota: 10_000,
+      overagePerScoreUsd: 0.012,
+      overageCapUsd: 50,
+      remaining: 6_000,
+    })
+  })
+
+  it('remaining never goes negative once usage exceeds quota', () => {
+    const summary = usageSummary(PLANS.free, 1_500, 50, '2026-07')
+    expect(summary.remaining).toBe(0)
   })
 })
