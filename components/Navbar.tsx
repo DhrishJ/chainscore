@@ -30,6 +30,9 @@ export function Navbar() {
             <Link href="/dashboard" className="hover:text-text transition-colors">
               Dashboard
             </Link>
+            <Link href="/pricing" className="hover:text-text transition-colors">
+              Pricing
+            </Link>
             <Link href="/retrospective" className="hover:text-text transition-colors">
               Retrospective
             </Link>
@@ -56,6 +59,9 @@ export function Navbar() {
           </Link>
           <Link href="/dashboard" className="hover:text-text transition-colors" onClick={() => setMobileOpen(false)}>
             Dashboard
+          </Link>
+          <Link href="/pricing" className="hover:text-text transition-colors" onClick={() => setMobileOpen(false)}>
+            Pricing
           </Link>
           <Link href="/retrospective" className="hover:text-text transition-colors" onClick={() => setMobileOpen(false)}>
             Retrospective
