@@ -25,7 +25,7 @@ interface SeedFact {
   verified: boolean
 }
 
-const FACTS: SeedFact[] = [
+export const FACTS: SeedFact[] = [
   // ---- Verified: traced to on-disk data ----
   {
     key: 'score_range',
@@ -223,10 +223,10 @@ const FACTS: SeedFact[] = [
     numericValue: 250000,
     unit: 'wallets',
     definition:
-      'SITE CLAIM UNDER REVIEW: "250K+ Borrowers analyzed". The number traces to borrowers_ingested (254,729) but "analyzed" overstates: only 40,000 wallets were fully analyzed (training_wallets). Human must pick the wording: "250K+ borrower records ingested" (defensible) or "40,000 wallets analyzed in training" (strictest). Until then this claim may not publish.',
-    source: 'FACTS_TODO.md item 1',
+      'GATE 0 DECISION (2026-07-06): the 250K+ figure may publish ONLY with ingestion verbs: "250K+ borrower records ingested" or "built from 250K+ borrowers lending data". The word "analyzed" is not allowed with this number (only 40,000 wallets were fully analyzed; see training_wallets). Backed by borrowers_ingested = 254,729.',
+    source: 'FACTS_TODO.md item 1; Gate 0 reconciliation',
     asOf: '2026-07-06',
-    verified: false,
+    verified: true,
   },
   {
     key: 'claim_8_networks_covered',
@@ -234,10 +234,10 @@ const FACTS: SeedFact[] = [
     numericValue: 8,
     unit: 'chains',
     definition:
-      'SITE CLAIM UNDER REVIEW: "8 Networks covered" (7 EVM + Solana). Solana runs a separate scoring path that is NOT on the partner v1 API (returns 501, D-020), and Scroll/Avalanche have degraded tx-history features. Human must decide the honest phrasing (e.g., "7 EVM networks + Solana" with a coverage note). Until then this claim may not publish.',
-    source: 'FACTS_TODO.md item 2; DECISIONS.md D-020',
+      'GATE 0 DECISION (2026-07-06): canonical phrasing is "7 EVM networks + Solana". The digit 8 may appear only when accompanied by the coverage note or a link to the coverage table (Solana not on partner v1 API per D-020; Scroll/Avalanche degraded tx features). Flat "8 networks covered" with no caveat is not allowed.',
+    source: 'FACTS_TODO.md item 2; DECISIONS.md D-020; Gate 0 reconciliation',
     asOf: '2026-07-06',
-    verified: false,
+    verified: true,
   },
   {
     key: 'claim_25k_liquidation_events',
@@ -245,8 +245,8 @@ const FACTS: SeedFact[] = [
     numericValue: 25000,
     unit: 'events',
     definition:
-      'SITE CLAIM UNDER REVIEW: "Liquidation records: 25K+ events". Closest verified figure is 20,717 unique liquidated WALLETS; a per-event count of 25K+ could not be traced on disk. Recommend replacing with "20K+ liquidated wallets" (backed by liquidated_wallets_unique). Until then this claim may not publish.',
-    source: 'FACTS_TODO.md item 3',
+      'GATE 0 DECISION (2026-07-06): REJECTED. No event-level count exists on disk. Public copy uses "20K+ liquidated wallets" (backed by liquidated_wallets_unique = 20,717). This row stays unverified so 25K+ remains blocked unless a real event count is ever registered.',
+    source: 'FACTS_TODO.md item 3; Gate 0 reconciliation',
     asOf: '2026-07-06',
     verified: false,
   },

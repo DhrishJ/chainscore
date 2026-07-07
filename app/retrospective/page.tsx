@@ -5,9 +5,26 @@ import { ChainBarChart, type ChainDatum } from '@/components/retrospective/Chain
 import { ReliabilityChart } from '@/components/retrospective/ReliabilityChart'
 
 export const metadata: Metadata = {
-  title: 'The Liquidation Retrospective | ChainScore',
+  title: 'The Liquidation Retrospective',
   description:
     'Would ChainScore have flagged the wallets that got liquidated? An honest look at the backtest: recall, false positives, calibration, and where the model is weakest, built from real backtest output.',
+  alternates: { canonical: '/retrospective' },
+}
+
+// The retrospective is the citable data asset (Phase 5 SEO): a reproducible
+// point-in-time backtest published as a Dataset so it can earn links and
+// rank as evidence, not marketing.
+const datasetSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'Dataset',
+  name: 'ChainScore Liquidation Backtest',
+  description:
+    'Point-in-time backtest of the ChainScore onchain credit model against real liquidation outcomes: recall, false positive rate, precision, calibration, and per-chain slices. Zero lookahead, reproducible, updated with each model version.',
+  url: 'https://chainscore.dev/retrospective',
+  creator: { '@id': 'https://chainscore.dev/#organization' },
+  license: 'https://chainscore.dev/',
+  variableMeasured: ['recall', 'false positive rate', 'precision', 'ROC-AUC', 'PR-AUC', 'calibration'],
+  dateModified: (report as { generatedAt: string }).generatedAt,
 }
 
 function pct(fraction: number): string {
@@ -44,6 +61,10 @@ export default function RetrospectivePage() {
 
   return (
     <main className="min-h-screen px-4 py-10 max-w-4xl mx-auto flex flex-col gap-16">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(datasetSchema) }}
+      />
       {/* Hero */}
       <section className="flex flex-col gap-4" aria-labelledby="retro-heading">
         <p className="text-xs uppercase tracking-widest text-muted">
