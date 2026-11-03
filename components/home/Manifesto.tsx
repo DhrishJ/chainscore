@@ -8,7 +8,7 @@ export function Manifesto() {
   return (
     <div data-mark="manifesto" className="frame relative min-h-[118svh] pt-[62svh] sm:pt-[22svh]">
       <div className="grid grid-cols-12 gap-x-[var(--gutter)]">
-        <div className="col-span-12 -mx-[var(--gutter)] bg-background px-[var(--gutter)] py-6 sm:mx-0 sm:bg-transparent sm:px-0 sm:py-0 lg:col-span-7">
+        <div className="col-span-12 -mx-[var(--gutter)] bg-background px-[var(--gutter)] py-6 sm:mx-0 sm:bg-transparent sm:px-0 sm:py-0 lg:col-span-6">
           <SectionLabel index="02" name="Principle" aside="The borrower gate" />
           <ManifestoWords
             text="Most wallets should not have a credit score."

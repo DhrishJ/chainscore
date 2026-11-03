@@ -108,7 +108,7 @@ export function BacktestStage({ counts, cutoff, children }: Props) {
       style={{ opacity: 0, visibility: 'hidden' }}
     >
       <div className="-translate-x-1/2 -translate-y-full pb-1 text-center">
-        <div className="inline-block bg-background/88 px-2.5 py-1.5 backdrop-blur-[2px]">
+        <div className="inline-block border border-text/10 bg-background px-2.5 py-1.5">
           <div
             className={`t-headline tnum text-2xl sm:text-3xl ${
               tone === 'signal' ? 'text-danger' : tone === 'accent' ? 'text-accent' : 'text-text'

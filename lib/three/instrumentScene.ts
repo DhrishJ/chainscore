@@ -77,7 +77,7 @@ function poses(aspect: number): { hero: Pose; turn: Pose; exploded: Pose } {
   }
   return {
     hero: { nx: 0.44, ny: -0.02, size: 0.68, yaw: -16, pitch: 7, roll: 0, explode: 0 },
-    turn: { nx: 0.5, ny: -0.02, size: 0.6, yaw: -42, pitch: 15, roll: -8, explode: 0 },
+    turn: { nx: 0.56, ny: -0.02, size: 0.58, yaw: -42, pitch: 15, roll: -8, explode: 0 },
     exploded: { nx: 0.36, ny: 0.02, size: 0.44, yaw: -60, pitch: 21, roll: -4, explode: 1 },
   }
 }
