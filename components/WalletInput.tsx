@@ -1,19 +1,24 @@
 'use client'
 
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { isAddress } from 'viem'
 import { CHAIN_LIST } from '@/lib/chains'
 import { isSolanaAddress } from '@/lib/solanaAuth'
 
+// One ruled instrument field: chain, address, action. Typing nudges the
+// hero instrument's needle (it listens for `cs:typing`), as if the gauge is
+// already reading the address being entered.
+
 export function WalletInput({
-  placeholder = 'Enter wallet address or ENS name',
+  placeholder = 'Wallet address or ENS name',
   defaultChain = 'ethereum',
 }: {
   placeholder?: string
   defaultChain?: string
 }) {
   const router = useRouter()
+  const id = useId()
   const [value, setValue] = useState('')
   const [chain, setChain] = useState(defaultChain)
   const [error, setError] = useState('')
@@ -22,47 +27,46 @@ export function WalletInput({
   function validate(input: string): boolean {
     const trimmed = input.trim()
     if (!trimmed) {
-      setError('Please enter a wallet address or ENS name.')
+      setError('Enter a wallet address or ENS name.')
       return false
     }
     if (chain === 'solana') {
       if (!isSolanaAddress(trimmed)) {
-        setError('Invalid Solana address. Please check and try again.')
+        setError('That is not a valid Solana address.')
         return false
       }
       return true
     }
-    if (trimmed.endsWith('.eth')) {
-      return true
-    }
+    if (trimmed.endsWith('.eth')) return true
     if (!isAddress(trimmed)) {
-      setError('Invalid address. Please check and try again.')
+      setError('That is not a valid address. Check it and try again.')
       return false
     }
     return true
   }
 
-  async function handleSubmit(e: React.FormEvent) {
+  function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError('')
     const trimmed = value.trim()
-
     if (!validate(trimmed)) return
-
     setLoading(true)
     router.push(`/score/${trimmed}?chain=${chain}`)
   }
 
   return (
-    <form onSubmit={handleSubmit} className="w-full max-w-2xl mx-auto">
-      <div className="flex flex-col sm:flex-row gap-3">
-        <div className="flex-1 flex gap-2">
+    <form onSubmit={handleSubmit} className="w-full" noValidate>
+      <div className="flex flex-col border border-text/30 bg-background/70 backdrop-blur-[2px] transition-colors focus-within:border-accent sm:flex-row">
+        <label htmlFor={`${id}-chain`} className="sr-only">
+          Chain
+        </label>
+        <div className="relative border-b border-text/20 sm:border-b-0 sm:border-r">
           <select
+            id={`${id}-chain`}
             value={chain}
             onChange={(e) => setChain(e.target.value)}
             disabled={loading}
-            aria-label="Select chain"
-            className="px-3 py-3 rounded-xl bg-card border border-border text-text text-sm outline-none focus:border-accent/60 transition-all cursor-pointer"
+            className="t-label h-12 w-full cursor-pointer appearance-none bg-transparent pl-4 pr-9 text-text outline-none sm:w-auto"
           >
             {CHAIN_LIST.map((c) => (
               <option key={c.slug} value={c.slug}>
@@ -71,32 +75,47 @@ export function WalletInput({
             ))}
             <option value="solana">Solana</option>
           </select>
-          <input
-            type="text"
-            value={value}
-            onChange={(e) => {
-              setValue(e.target.value)
-              if (error) setError('')
-            }}
-            placeholder={placeholder}
-            className={`flex-1 px-4 py-3 rounded-xl bg-card border text-text placeholder-muted outline-none transition-all text-sm sm:text-base
-              ${error ? 'border-danger focus:border-danger' : 'border-border focus:border-accent/60'}`}
-            disabled={loading}
-            spellCheck={false}
-            autoComplete="off"
+          <span
+            className="pointer-events-none absolute right-3.5 top-1/2 h-1.5 w-1.5 -translate-y-[70%] rotate-45 border-b border-r border-text/70"
+            aria-hidden
           />
         </div>
+        <label htmlFor={`${id}-address`} className="sr-only">
+          Wallet address or ENS name
+        </label>
+        <input
+          id={`${id}-address`}
+          type="text"
+          value={value}
+          onChange={(e) => {
+            setValue(e.target.value)
+            if (error) setError('')
+            window.dispatchEvent(new CustomEvent('cs:typing'))
+          }}
+          placeholder={placeholder}
+          aria-invalid={Boolean(error)}
+          aria-describedby={error ? `${id}-error` : undefined}
+          className="h-12 min-w-0 flex-1 bg-transparent px-4 font-mono text-sm text-text outline-none placeholder:text-muted"
+          disabled={loading}
+          spellCheck={false}
+          autoComplete="off"
+          autoCapitalize="off"
+        />
         <button
           type="submit"
-          disabled={loading || !value.trim()}
-          className="px-6 py-3 rounded-xl bg-accent text-background font-semibold text-sm sm:text-base transition-all
-            hover:bg-accent/90 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap font-grotesk"
+          disabled={loading}
+          className="btn btn-ink h-12 shrink-0 sm:min-w-[11.5rem]"
         >
-          {loading ? 'Loading…' : 'Check Score'}
+          <span>{loading ? 'Measuring' : 'Check score'}</span>
+          <span className="btn-arrow" aria-hidden>
+            →
+          </span>
         </button>
       </div>
       {error && (
-        <p className="mt-2 text-danger text-sm">{error}</p>
+        <p id={`${id}-error`} role="alert" className="t-label mt-2 text-danger">
+          {error}
+        </p>
       )}
     </form>
   )

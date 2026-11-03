@@ -28,11 +28,12 @@
 const reporting = ['report-uri /api/csp-report']
 
 // fonts.googleapis.com / fonts.gstatic.com: @solana/wallet-adapter-react-ui's
-// styles.css @imports DM Sans from Google Fonts. Blocking that @import makes
-// the parent webpack CSS chunk fire onerror, which surfaces as a
-// ChunkLoadError that crashes the whole client app (found by the e2e suite
-// when enforcement first landed). The app's own fonts are self-hosted via
-// next/font; these two hosts exist solely for that third-party stylesheet.
+// styles.css @imports DM Sans from Google Fonts. A blocked @import made the
+// parent webpack CSS chunk fire onerror, surfacing as a ChunkLoadError that
+// crashed the whole client app. The stylesheet is now vendored without the
+// @import (components/solana-wallet-adapter.css), so nothing first-party
+// needs these hosts; they stay allowed until the wallet SDKs' own runtime
+// font loading has been audited, then can be dropped from font/style-src.
 const enforcedBase = [
   "default-src 'self'",
   "base-uri 'self'",

@@ -15,10 +15,12 @@ const queryClient = new QueryClient()
 
 function RainbowWrapper({ children }: { children: React.ReactNode }) {
   const { theme } = useTheme()
+  // House accent per theme (app/globals.css --cs-accent), square corners
+  // to match the instrument aesthetic.
   const rkTheme =
     theme === 'dark'
-      ? darkTheme({ accentColor: '#0052FF', accentColorForeground: 'white' })
-      : lightTheme({ accentColor: '#0052FF', accentColorForeground: 'white' })
+      ? darkTheme({ accentColor: '#6B85FF', accentColorForeground: '#0C0C0B', borderRadius: 'none' })
+      : lightTheme({ accentColor: '#111110', accentColorForeground: '#F0EEE9', borderRadius: 'none' })
   return <RainbowKitProvider theme={rkTheme}>{children}</RainbowKitProvider>
 }
 

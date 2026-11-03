@@ -254,22 +254,28 @@ export default async function ScorePage({ params, searchParams }: Props) {
     : await resolveAndScore(address, chainSlug)
   const displayAddress = result?.ens || address
 
-  return (
-    <main className="min-h-screen px-4 py-12 max-w-3xl mx-auto">
-      {/* Back link */}
-      <Link
-        href="/"
-        className="inline-flex items-center gap-1.5 text-muted text-sm hover:text-text transition-colors mb-8"
-      >
-        <span>←</span> ChainScore
-      </Link>
+  const shortAddress = displayAddress.length > 20 ? `${displayAddress.slice(0, 10)}...${displayAddress.slice(-8)}` : displayAddress
+  const networkName = chain?.name ?? 'Solana'
 
-      {/* Chain selector tabs */}
-      <div className="flex flex-wrap gap-2 mb-6">
+  return (
+    <main className="frame relative max-w-[1240px] pb-24 pt-10 sm:pt-14">
+      {/* Running header, as on every editorial page. */}
+      <div className="grid grid-cols-12 gap-x-[var(--gutter)] border-t border-text/80 pt-3">
+        <p className="t-label col-span-6 text-text sm:col-span-4">
+          <Link href="/" className="link-u">
+            ← ChainScore
+          </Link>
+        </p>
+        <p className="t-label col-span-6 truncate text-right text-muted sm:col-span-8">{shortAddress}</p>
+      </div>
+
+      {/* Network tabs */}
+      <nav aria-label="Network" className="mt-8 flex flex-wrap gap-x-6 gap-y-3 border-b border-text/15">
         {isSol ? (
           <Link
             href={`/score/${address}?chain=solana`}
-            className="px-3 py-1.5 rounded-lg text-xs font-semibold font-grotesk border transition-all bg-accent text-white border-accent"
+            aria-current="page"
+            className="t-label -mb-px border-b-2 border-accent pb-3 text-text"
           >
             Solana
           </Link>
@@ -280,10 +286,9 @@ export default async function ScorePage({ params, searchParams }: Props) {
               <Link
                 key={c.slug}
                 href={`/score/${address}?chain=${c.slug}`}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold font-grotesk border transition-all ${
-                  isActive
-                    ? 'bg-accent text-white border-accent'
-                    : 'text-muted border-border hover:border-accent/40 hover:text-text'
+                aria-current={isActive ? 'page' : undefined}
+                className={`t-label -mb-px border-b-2 pb-3 transition-colors ${
+                  isActive ? 'border-accent text-text' : 'border-transparent text-muted hover:text-text'
                 }`}
               >
                 {c.name}
@@ -291,234 +296,209 @@ export default async function ScorePage({ params, searchParams }: Props) {
             )
           })
         )}
-      </div>
+      </nav>
 
       {!result ? (
-        <div className="rounded-2xl bg-card border border-border p-8 text-center">
-          <p className="text-2xl mb-2">⚠️</p>
-          <h1 className="font-grotesk text-xl font-semibold text-text mb-2">
-            Unable to Score Wallet
+        <section className="py-16 sm:py-24">
+          <p className="t-label text-danger">Error · not scored</p>
+          <h1 className="t-display mt-5 text-[clamp(3rem,7vw,6.5rem)] text-text">
+            Unable to score this wallet<span className="text-accent">.</span>
           </h1>
-          <p className="text-muted text-sm mb-6">
-            This address could not be resolved or scored. Check that it&apos;s a valid EVM
-            address or ENS name.
+          <p className="t-body mt-6 max-w-[52ch] text-muted">
+            This address could not be resolved or scored. Check that it&apos;s a valid EVM address or
+            ENS name.
           </p>
-          <Link
-            href="/"
-            className="px-5 py-2.5 rounded-xl bg-accent text-white font-semibold text-sm"
-          >
-            Try Another Wallet
+          <Link href="/" className="btn btn-ink mt-10">
+            <span>Try another wallet</span>
+            <span className="btn-arrow" aria-hidden>
+              →
+            </span>
           </Link>
-        </div>
+        </section>
       ) : result.noBorrowHistory ? (
-        <div className="rounded-2xl bg-card border border-border p-8 sm:p-10 text-center">
-          <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl border border-border bg-background">
-            <span className="font-mono text-2xl text-muted">?</span>
+        <section className="grid gap-x-[var(--gutter)] gap-y-10 py-16 sm:py-24 lg:grid-cols-12">
+          <div className="lg:col-span-7">
+            <p className="t-label text-muted">No score · {networkName}</p>
+            <h1 className="t-display mt-5 text-[clamp(3rem,7vw,6.5rem)] text-text">
+              No borrowing history<span className="text-accent">.</span>
+            </h1>
+            <p className="t-label mt-6 text-muted">{shortAddress}</p>
+            <p className="t-body mt-6 max-w-[56ch] text-text">
+              ChainScore is a credit score for borrowers. It only rates wallets that have an onchain
+              borrowing record, because repayment behavior is what a credit score measures. We did not
+              find any borrowing activity for this wallet on the lending protocols we track (
+              {networkName}).
+            </p>
+            <p className="t-body mt-4 max-w-[56ch] text-muted">
+              Borrow and repay on a supported lending protocol to build a credit history, then check
+              back to see your score.
+            </p>
+            <Link href="/" className="btn btn-ink mt-10">
+              <span>Check another wallet</span>
+              <span className="btn-arrow" aria-hidden>
+                →
+              </span>
+            </Link>
           </div>
-          <h1 className="font-grotesk text-2xl font-bold text-text mb-3">
-            No Borrowing History
-          </h1>
-          <p className="text-muted text-xs font-mono mb-5">
-            {displayAddress.length > 20
-              ? `${displayAddress.slice(0, 10)}...${displayAddress.slice(-8)}`
-              : displayAddress}
-          </p>
-          <p className="text-text/80 text-sm leading-relaxed mb-6 max-w-md mx-auto">
-            ChainScore is a credit score for borrowers. It only rates wallets that have an
-            onchain borrowing record, because repayment behavior is what a credit score
-            measures. We did not find any borrowing activity for this wallet on the lending
-            protocols we track ({chain?.name ?? 'Solana'}).
-          </p>
-          <p className="text-muted text-sm leading-relaxed mb-7 max-w-md mx-auto">
-            Borrow and repay on a supported lending protocol to build a credit history, then
-            check back to see your score.
-          </p>
-          <Link
-            href="/"
-            className="inline-block px-5 py-2.5 rounded-xl bg-accent text-white font-semibold text-sm hover:bg-accent/90 transition-colors"
-          >
-            Check Another Wallet
-          </Link>
-        </div>
+          <div className="lg:col-span-4 lg:col-start-9">
+            <div className="border border-text/20 bg-ink p-5 text-ink-fg">
+              <p className="t-label text-ink-muted">What the API returns</p>
+              <pre className="mt-4 font-mono text-[12.5px] leading-[1.8]">
+                <code>
+                  {'{\n  "noBorrowHistory": '}
+                  <span className="text-ink-amber">true</span>
+                  {',\n  "score": '}
+                  <span className="text-ink-accent">0</span>
+                  {',\n  "factors": []\n}'}
+                </code>
+              </pre>
+            </div>
+          </div>
+        </section>
       ) : result.newWallet ? (
-        <div className="rounded-2xl bg-card border border-border p-8 text-center">
-          <div className="text-5xl font-bold font-grotesk text-muted mb-4">300</div>
-          <h1 className="font-grotesk text-xl font-semibold text-text mb-2">
-            No On-Chain History
+        <section className="py-16 sm:py-24">
+          <p className="t-label text-muted">No history · {networkName}</p>
+          <h1 className="t-display mt-5 text-[clamp(3rem,7vw,6.5rem)] text-text">
+            No onchain history<span className="text-accent">.</span>
           </h1>
-          <p className="text-muted text-xs font-mono mb-4">
-            {displayAddress.length > 20
-              ? `${displayAddress.slice(0, 10)}...${displayAddress.slice(-8)}`
-              : displayAddress}
+          <p className="t-label mt-6 text-muted">{shortAddress}</p>
+          <p className="t-body mt-6 max-w-[52ch] text-muted">
+            This wallet has no transaction history on {networkName}. Start using it to build your
+            onchain credit profile.
           </p>
-          <p className="text-muted text-sm mb-6 max-w-sm mx-auto">
-            This wallet has no transaction history on {chain?.name ?? 'Solana'}. Start using it to build
-            your onchain credit profile.
-          </p>
-          <Link
-            href="/"
-            className="px-5 py-2.5 rounded-xl bg-accent text-white font-semibold text-sm"
-          >
-            Check Another Wallet
+          <Link href="/" className="btn btn-ink mt-10">
+            <span>Check another wallet</span>
+            <span className="btn-arrow" aria-hidden>
+              →
+            </span>
           </Link>
-        </div>
+        </section>
       ) : (
-        <div className="flex flex-col gap-6">
-          {/* Header card */}
-          <div className="rounded-2xl bg-card border border-border p-6 sm:p-8">
-            <div className="flex flex-col sm:flex-row items-center gap-6">
-              <div className="flex-shrink-0">
-                <ScoreGauge score={result.score} />
-              </div>
+        <div className="flex flex-col gap-16 pt-10">
+          {/* Reading */}
+          <section className="grid items-center gap-x-[var(--gutter)] gap-y-8 lg:grid-cols-12" aria-label="Score">
+            <div className="flex justify-center lg:col-span-5 lg:justify-start">
+              <ScoreGauge score={result.score} />
+            </div>
 
-              <div className="flex-1 text-center sm:text-left">
-                <p className="text-muted text-xs font-mono mb-1">
-                  {result.ens
-                    ? result.ens
-                    : `${result.address.slice(0, 10)}...${result.address.slice(-8)}`}
-                </p>
+            <div className="lg:col-span-7">
+              <p className="t-label text-muted">{result.ens ? result.ens : shortAddress}</p>
 
+              <div className="mt-2 flex flex-wrap items-end gap-x-6 gap-y-3">
                 <ScoreCountUp
                   target={result.score}
-                  className={`text-5xl sm:text-6xl font-bold font-grotesk ${scoreTextColor(result.score)}`}
+                  className={`t-display tnum text-[clamp(5.5rem,11vw,9.5rem)] leading-none ${scoreTextColor(result.score)}`}
                 />
-
-                <div className="flex items-center gap-3 mt-3 justify-center sm:justify-start">
-                  <span
-                    className={`px-3 py-1 rounded-full border text-lg font-bold font-grotesk ${gradeColor(result.grade)}`}
-                  >
+                <div className="pb-3">
+                  <span className={`t-headline inline-block border px-3 py-1 text-2xl ${gradeColor(result.grade)}`}>
                     {result.grade}
                   </span>
-                  <span className="text-muted text-sm">
-                    Better than {result.percentile}% of wallets
+                  <p className="t-label mt-2 text-muted">Better than {result.percentile}% of wallets</p>
+                </div>
+              </div>
+
+              <dl className="mt-8 grid grid-cols-2 gap-x-[var(--gutter)] sm:grid-cols-4">
+                {[
+                  ['Network', networkName],
+                  [
+                    'Wallet age',
+                    result.walletAge > 365
+                      ? `${Math.floor(result.walletAge / 365)}y ${Math.floor((result.walletAge % 365) / 30)}m`
+                      : `${Math.floor(result.walletAge / 30)}m`,
+                  ],
+                  ['Transactions', result.totalTxns.toLocaleString()],
+                  ['Protocols', result.protocolsUsed.length > 0 ? result.protocolsUsed.join(', ') : 'None detected'],
+                ].map(([k, v]) => (
+                  <div key={k} className="border-t border-text/20 py-3">
+                    <dt className="t-label text-muted">{k}</dt>
+                    <dd className="t-body mt-1 text-[0.95rem] text-text">{v}</dd>
+                  </div>
+                ))}
+              </dl>
+
+              {/* Provenance: every displayed score names the model that
+                  produced it, when it was computed, and, when a data source
+                  was degraded, how complete the inputs were. Real values
+                  from the scoring result, never placeholders. */}
+              <div className="t-label mt-5 flex flex-wrap items-center gap-x-3 gap-y-1 text-muted">
+                {result.modelVersion && (
+                  <span title="The versioned model that produced this score">
+                    Model <span className="text-text">{result.modelVersion}</span>
                   </span>
-                </div>
-
-                <div className="flex flex-wrap gap-4 mt-4 justify-center sm:justify-start">
-                  <div>
-                    <p className="text-muted text-xs">Network</p>
-                    <p className="text-text text-sm font-medium">{chain?.name ?? 'Solana'}</p>
-                  </div>
-                  <div>
-                    <p className="text-muted text-xs">Wallet Age</p>
-                    <p className="text-text text-sm font-medium">
-                      {result.walletAge > 365
-                        ? `${Math.floor(result.walletAge / 365)}y ${Math.floor(
-                            (result.walletAge % 365) / 30
-                          )}m`
-                        : `${Math.floor(result.walletAge / 30)}m`}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-muted text-xs">Transactions</p>
-                    <p className="text-text text-sm font-medium">
-                      {result.totalTxns.toLocaleString()}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-muted text-xs">Protocols</p>
-                    <p className="text-text text-sm font-medium">
-                      {result.protocolsUsed.length > 0
-                        ? result.protocolsUsed.join(', ')
-                        : 'None detected'}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="mt-5">
-                  <ShareButton
-                    address={result.address}
-                    score={result.score}
-                    grade={result.grade}
-                  />
-                </div>
-
-                {/* Provenance: every displayed score names the model that
-                    produced it, when it was computed, and, when a data source
-                    was degraded, how complete the inputs were. Real values
-                    from the scoring result, never placeholders. */}
-                <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted justify-center sm:justify-start">
-                  {result.modelVersion && (
-                    <span title="The versioned model that produced this score">
-                      Model <span className="font-mono text-text">{result.modelVersion}</span>
+                )}
+                <span aria-hidden="true">·</span>
+                <span title="When this score was computed from onchain data">
+                  Scored {new Date(result.timestamp).toISOString().replace('T', ' ').slice(0, 16)} UTC
+                </span>
+                {typeof result.calibratedPD === 'number' && (
+                  <>
+                    <span aria-hidden="true">·</span>
+                    <span title="Calibrated probability of default the score is derived from">
+                      PD {(result.calibratedPD * 100).toFixed(1)}%
                     </span>
-                  )}
-                  <span aria-hidden="true">·</span>
-                  <span title="When this score was computed from onchain data">
-                    Scored {new Date(result.timestamp).toISOString().replace('T', ' ').slice(0, 16)} UTC
-                  </span>
-                  {typeof result.calibratedPD === 'number' && (
-                    <>
-                      <span aria-hidden="true">·</span>
-                      <span title="Calibrated probability of default the score is derived from">
-                        PD {(result.calibratedPD * 100).toFixed(1)}%
-                      </span>
-                    </>
-                  )}
-                  {typeof result.dataCompleteness === 'number' && result.dataCompleteness < 1 && (
-                    <>
-                      <span aria-hidden="true">·</span>
-                      <span className="text-warning">
-                        {Math.round(result.dataCompleteness * 100)}% data completeness
-                      </span>
-                    </>
-                  )}
-                </div>
-                {/* Degraded-state notice (Phase 6): the coverage table promises
-                    we say so when data is thinner; a hover tooltip is not
-                    saying so. Visible, named sources, no hiding. */}
+                  </>
+                )}
                 {typeof result.dataCompleteness === 'number' && result.dataCompleteness < 1 && (
-                  <div className="mt-3 flex items-start gap-2.5 rounded-lg border border-warning/40 bg-warning/10 px-3.5 py-2.5">
-                    <span className="mt-1 h-1.5 w-1.5 flex-none rounded-full bg-warning" aria-hidden />
-                    <p className="text-xs leading-relaxed text-text">
-                      Reduced data coverage on this score
-                      {(result.degradedSources ?? []).length > 0 && (
-                        <>
-                          {' '}
-                          ({(result.degradedSources ?? []).join(', ')})
-                        </>
-                      )}
-                      . The model saw less history than usual; treat the score with wider error
-                      bars.
-                    </p>
-                  </div>
+                  <>
+                    <span aria-hidden="true">·</span>
+                    <span className="text-warning">{Math.round(result.dataCompleteness * 100)}% data completeness</span>
+                  </>
                 )}
               </div>
+              {/* Degraded-state notice (Phase 6): the coverage table promises
+                  we say so when data is thinner; a hover tooltip is not
+                  saying so. Visible, named sources, no hiding. */}
+              {typeof result.dataCompleteness === 'number' && result.dataCompleteness < 1 && (
+                <div className="mt-4 flex items-start gap-3 border-l-2 border-warning bg-warning/10 px-4 py-3">
+                  <p className="t-body text-[0.9rem] text-text">
+                    Reduced data coverage on this score
+                    {(result.degradedSources ?? []).length > 0 && <> ({(result.degradedSources ?? []).join(', ')})</>}. The
+                    model saw less history than usual; treat the score with wider error bars.
+                  </p>
+                </div>
+              )}
+
+              <div className="mt-6">
+                <ShareButton address={result.address} score={result.score} grade={result.grade} />
+              </div>
             </div>
-          </div>
+          </section>
 
           {/* Factor breakdown */}
-          <div>
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="font-grotesk font-semibold text-muted text-xs uppercase tracking-wider">
-                What Drives Your Score
+          <section aria-labelledby="factors-heading">
+            <div className="flex items-baseline justify-between gap-6 border-t border-text/80 pt-3">
+              <h2 id="factors-heading" className="t-label text-text">
+                What drives this score
               </h2>
-              <span className="px-2 py-0.5 rounded-full bg-accent/10 text-accent text-xs border border-accent/20 font-medium">
-                ML model
-              </span>
+              <span className="t-label text-accent">Model contributions</span>
             </div>
-            <div className="flex flex-col gap-3">
+            <div className="mt-6 flex flex-col gap-3">
               {result.factors.map((factor) => (
                 <FactorCard key={factor.name} factor={factor} />
               ))}
             </div>
 
             {result.factors.length > 0 && !result.newWallet && !result.noBorrowHistory && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
+              <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <RadarFactors factors={result.factors} />
                 <ContributionWaterfall contributions={result.topContributions} />
               </div>
             )}
-          </div>
+          </section>
 
           <ImprovementTips factors={result.factors} />
 
-          <div className="rounded-2xl bg-card border border-border p-6">
-            <h2 className="font-grotesk font-semibold text-text mb-4">Check Another Wallet</h2>
-            <WalletInput placeholder="Enter address or ENS name" defaultChain={chainSlug} />
-          </div>
+          <section aria-labelledby="another-heading" className="border-t border-text/80 pt-3">
+            <h2 id="another-heading" className="t-label text-text">
+              Measure another wallet
+            </h2>
+            <div className="mt-6 max-w-3xl">
+              <WalletInput placeholder="Wallet address or ENS name" defaultChain={chainSlug} />
+            </div>
+          </section>
         </div>
       )}
     </main>
   )
 }
+

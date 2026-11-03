@@ -17,8 +17,8 @@ export function ContributionWaterfall({ contributions }: ContributionWaterfallPr
   const maxAbsImpact = Math.max(...contributions.map((c) => Math.abs(c.impact)))
 
   return (
-    <div className="rounded-2xl bg-card border border-border p-5">
-      <h3 className="font-grotesk font-semibold text-text text-sm mb-1">
+    <div className="border border-text/15 bg-card/40 p-5">
+      <h3 className="t-label mb-1 text-text">
         How each signal moved the score
       </h3>
       <p className="text-muted text-xs mb-4">
@@ -40,13 +40,13 @@ export function ContributionWaterfall({ contributions }: ContributionWaterfallPr
                   <div className="absolute left-1/2 top-0 bottom-0 w-px bg-border" aria-hidden="true" />
                   {isPositive ? (
                     <div
-                      className="absolute left-1/2 top-0.5 bottom-0.5 rounded-r-sm bg-success"
+                      className="absolute left-1/2 top-0.5 bottom-0.5 bg-success"
                       style={{ width: `${widthPct / 2}%` }}
                       aria-hidden="true"
                     />
                   ) : (
                     <div
-                      className="absolute right-1/2 top-0.5 bottom-0.5 rounded-l-sm bg-danger"
+                      className="absolute right-1/2 top-0.5 bottom-0.5 bg-danger"
                       style={{ width: `${widthPct / 2}%` }}
                       aria-hidden="true"
                     />

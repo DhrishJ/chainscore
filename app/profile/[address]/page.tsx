@@ -46,7 +46,7 @@ export default async function ProfilePage({
         <div className="space-y-4">
           <div className="rounded-xl border border-border bg-card p-6 text-center">
             <div className="w-32 h-32 mx-auto mb-4">
-              <ScoreGauge score={score.score} />
+              <ScoreGauge score={score.score} className="h-full w-full" />
             </div>
             <h1 className="font-grotesk font-bold text-xl tracking-[-0.02em] text-text">{displayName}</h1>
             <div className="mt-2 flex justify-center">

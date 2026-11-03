@@ -179,7 +179,7 @@ function ListingDetailInner({ listing }: { listing: Listing }) {
             <h2 className="font-grotesk font-semibold text-text mb-4">Lender Profile</h2>
             <div className="flex items-start gap-6">
               <div className="w-24 h-24 flex-shrink-0">
-                <ScoreGauge score={listing.lender.score} />
+                <ScoreGauge score={listing.lender.score} className="h-full w-full" />
               </div>
               <div className="flex-1">
                 <div className="flex items-center gap-3 mb-1">

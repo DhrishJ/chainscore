@@ -1,28 +1,39 @@
-import type { Metadata } from 'next'
-import { Space_Grotesk, Inter, JetBrains_Mono } from 'next/font/google'
+import type { Metadata, Viewport } from 'next'
+import { Archivo, IBM_Plex_Mono, Newsreader } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import { Providers } from '@/components/Providers'
 import { Navbar } from '@/components/Navbar'
 import { StructuredData } from '@/components/StructuredData'
+import { MotionRoot } from '@/components/site/MotionRoot'
 import { clientEnv } from '@/lib/env.client'
 import './globals.css'
 
-const spaceGrotesk = Space_Grotesk({
+// House type (docs/DESIGN.md): Archivo carries display, UI, and body, with
+// its width axis doing the condensed-headline and engraved-label work;
+// Newsreader is the editorial voice; IBM Plex Mono annotates and holds data.
+// All three are self-hosted by next/font at build time (CSP font-src 'self').
+const archivo = Archivo({
   subsets: ['latin'],
-  variable: '--font-space-grotesk',
+  axes: ['wdth'],
+  variable: '--font-archivo',
   display: 'swap',
 })
 
-const inter = Inter({
+const plexMono = IBM_Plex_Mono({
   subsets: ['latin'],
-  variable: '--font-inter',
+  weight: ['400', '500'],
+  variable: '--font-plex-mono',
   display: 'swap',
 })
 
-const jetbrainsMono = JetBrains_Mono({
+// Below the fold only, so it does not compete with the hero for bandwidth.
+const newsreader = Newsreader({
   subsets: ['latin'],
-  variable: '--font-jetbrains-mono',
+  axes: ['opsz'],
+  style: ['normal', 'italic'],
+  variable: '--font-newsreader',
   display: 'swap',
+  preload: false,
 })
 
 export const metadata: Metadata = {
@@ -48,19 +59,37 @@ export const metadata: Metadata = {
   },
 }
 
+export const viewport: Viewport = {
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#F0EEE9' },
+    { media: '(prefers-color-scheme: dark)', color: '#0C0C0B' },
+  ],
+}
+
+// Runs before first paint: theme class (no flash) and the motion class that
+// lets lib/motion arm reveals. Reduced-motion readers never get `motion`.
+const bootScript = `(function(){var d=document.documentElement;try{var t=localStorage.getItem('cs-theme');if(t==='dark')d.classList.add('dark');}catch(e){}try{if(!window.matchMedia('(prefers-reduced-motion: reduce)').matches)d.classList.add('motion');}catch(e){}})();`
+
 export default function RootLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" suppressHydrationWarning className={`${spaceGrotesk.variable} ${inter.variable} ${jetbrainsMono.variable}`}>
+    <html
+      lang="en"
+      suppressHydrationWarning
+      className={`${archivo.variable} ${plexMono.variable} ${newsreader.variable}`}
+    >
       <head>
-        <script dangerouslySetInnerHTML={{ __html: `(function(){try{var t=localStorage.getItem('cs-theme');if(t==='dark')document.documentElement.classList.add('dark');}catch(e){}})();` }} />
+        <script dangerouslySetInnerHTML={{ __html: bootScript }} />
         <StructuredData />
       </head>
-      <body className="min-h-screen bg-background font-sans text-text antialiased">
+      {/* The navbar is fixed; pages start below it. The home page pulls
+          itself back up underneath (its hero is drawn for that). */}
+      <body className="min-h-screen bg-background pt-[var(--nav-h)] font-sans text-text antialiased">
         <Providers>
+          <MotionRoot />
           <Navbar />
           {children}
         </Providers>

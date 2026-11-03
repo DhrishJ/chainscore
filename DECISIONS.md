@@ -3,6 +3,55 @@
 Running log of assumptions and decisions made during the rebuild. Newest first.
 Each entry: date, decision, reasoning, alternatives rejected.
 
+## 2026-11-03: Site redesign ("The Instrument")
+
+**D-037. Every number the redesign shows is derived, not typed.**
+The home page and retrospective now visualise the backtest (a 7,720-block
+confusion-matrix sculpture, a 2D waffle) and the model (a dial printed at
+the real score band and grade cutoffs, gears per factor group). Those
+values come from `ml/model_meta.json` and `reports/backtest/latest.json`
+through `lib/site/modelFacts.ts`, and the API console's example envelope is
+built in `lib/site/apiExample.ts` from the same band and deciles. Both
+modules are pinned by tests (`modelFacts.test.ts`, `apiExample.test.ts`),
+including a check that the example carries every field the OpenAPI
+contract requires. The confusion cells are recovered exactly: the
+report's recall and FPR are ratios of whole wallets. Rejected: hand-typed
+counts in components (drift the day the backtest re-runs); sizing the
+gears by `factor_scales` (the pipeline that computes it is not in the
+repo, so its meaning cannot be verified; feature counts per group are).
+
+**D-036. 3D is progressive enhancement on top of a server-rendered page.**
+three.js and both scenes load by dynamic import after hydration, so the
+home page's First Load JS moved from 120 kB (D-024) to 126 kB; the 3D
+chunks (about 210 kB gzipped in total, three.js shared by both stages)
+arrive after first paint. The hero headline stays the LCP element and enters on transform
+only (D-032). A pre-rendered still of the instrument
+(`public/images/cs1-instrument*.webp`, rendered from the same model) shows
+while three.js loads and is the whole experience without WebGL or with
+prefers-reduced-motion, which also skips smooth scrolling and reveals.
+Every caption carries its numbers in text, so the canvases are
+aria-hidden. Stages render only while on screen. Rejected: a preloader
+(adds its duration to LCP); a single fixed full-page canvas (harder to
+pause and to reason about); downloading HDR/GLB assets (CSP, weight; the
+environment map is built from emissive panels and prefiltered by PMREM).
+
+**D-035. On editorial routes the wallet stack mounts only on a wallet
+press (amends D-032).**
+EvmGate swaps `children` for `<Providers>{children}</Providers>` when the
+EVM chunk arrives, which remounts the whole page. With the idle timer and
+the first-pointerdown trigger, every page rebuilt itself about 3.5 s after
+load, and a click into the score field (itself the first pointerdown)
+recreated that input a moment later, dropping focus and anything typed.
+With WebGL on the page the remount also tore down and rebuilt both 3D
+stages. On `/`, `/retrospective`, `/pricing`, and `/score/*`, nothing needs
+wagmi until the visitor presses a wallet button, so those routes skip the
+idle and global-input triggers; the EVM and Solana placeholders arm the
+gate on press. App routes (dashboard, marketplace) keep D-032's eager
+behaviour. Trade-off: a returning visitor's autoconnected address shows on
+editorial routes only after a wallet press. Rejected: keeping the remount
+and re-initialising WebGL (visible flash, wasted work); statically
+importing the providers (undoes D-032's 900 KB deferral).
+
 ## 2026-07-06: Autopilot Phase 0 (Facts Registry)
 
 **D-034. The facts validator matches numbers; humans pin wording. Claims

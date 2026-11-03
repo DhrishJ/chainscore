@@ -9,7 +9,7 @@ import Link from 'next/link'
 function SolScorePill({ score, grade }: { score: number; grade: string }) {
   const color = stylesForGrade(grade).pill
   return (
-    <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium ${color}`}>
+    <span className={`t-label inline-flex items-center gap-1 border px-2 py-1 ${color}`}>
       {score} <span className="opacity-60">{grade}</span>
     </span>
   )
@@ -42,9 +42,9 @@ export function SolanaWalletButton() {
     return (
       <button
         onClick={() => setVisible(true)}
-        className="px-3 py-1.5 text-xs rounded-lg border border-border text-muted hover:text-text hover:border-accent/40 transition-all font-medium"
+        className="t-label h-9 border border-text/25 px-3 text-muted transition-colors hover:border-text/60 hover:text-text"
       >
-        ◎ Solana
+        Solana
       </button>
     )
   }
@@ -58,10 +58,10 @@ export function SolanaWalletButton() {
       )}
       <button
         onClick={() => disconnect()}
-        className="px-3 py-1.5 text-xs rounded-lg border border-border text-muted hover:text-text transition-all font-medium flex items-center gap-1.5"
+        className="t-label flex h-9 items-center gap-1.5 border border-text/25 px-3 text-muted transition-colors hover:border-text/60 hover:text-text"
         title="Disconnect Solana wallet"
       >
-        <span className="w-1.5 h-1.5 rounded-full bg-[#9945FF] inline-block" />
+        <span className="inline-block h-1.5 w-1.5 bg-success" aria-hidden />
         {address?.slice(0, 4)}…{address?.slice(-4)}
       </button>
     </div>

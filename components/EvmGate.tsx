@@ -9,6 +9,7 @@ import {
   type ComponentType,
   type ReactNode,
 } from 'react'
+import { usePathname } from 'next/navigation'
 
 // Defers the ~900 KB EVM wallet subtree (wagmi + viem + RainbowKit) off the
 // critical path (DECISIONS.md D-032). Until the subtree mounts, children
@@ -65,14 +66,33 @@ export function useRequireEvm(): boolean {
 
 const IDLE_MOUNT_MS = 3500
 
+// Editorial routes mount the wallet stack only on an explicit wallet press.
+// Swapping in the providers remounts the whole page (see above), which on
+// these routes would tear down and rebuild the WebGL stages a few seconds
+// after load, and, if the trigger was a click into the score field, drop
+// that field's focus and whatever was typed. Nothing on these pages needs
+// wagmi until the visitor reaches for a wallet button. App routes keep the
+// eager first-interaction / idle mount (D-032).
+function isEditorialRoute(pathname: string | null): boolean {
+  if (!pathname) return false
+  return (
+    pathname === '/' ||
+    pathname === '/retrospective' ||
+    pathname === '/pricing' ||
+    pathname.startsWith('/score/')
+  )
+}
+
 export function EvmGate({ children }: { children: ReactNode }) {
   const [Providers, setProviders] = useState<EvmProvidersComponent | null>(null)
   const [requested, setRequested] = useState(false)
+  const pathname = usePathname()
+  const editorial = isEditorialRoute(pathname)
 
   const require = useCallback(() => setRequested(true), [])
 
   useEffect(() => {
-    if (requested) return
+    if (requested || editorial) return
     const timer = window.setTimeout(require, IDLE_MOUNT_MS)
     const onFirstInput = () => require()
     window.addEventListener('pointerdown', onFirstInput, { once: true, passive: true })
@@ -82,7 +102,7 @@ export function EvmGate({ children }: { children: ReactNode }) {
       window.removeEventListener('pointerdown', onFirstInput)
       window.removeEventListener('keydown', onFirstInput)
     }
-  }, [requested, require])
+  }, [requested, require, editorial])
 
   useEffect(() => {
     if (!requested || Providers) return

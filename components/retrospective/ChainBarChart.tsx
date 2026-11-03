@@ -15,11 +15,13 @@ interface ChainBarChartProps {
   weakestChain: string
 }
 
-const ACCENT = '#0052FF'
-const DANGER = '#FF3B5C'
-const GRID = '#1C2333'
-const MUTED = '#5A6478'
-const TEXT = '#E8EDF5'
+// Theme tokens straight from app/globals.css, so the chart follows paper
+// and graphite like everything else.
+const INK = 'rgb(var(--cs-text))'
+const DANGER = 'rgb(var(--cs-danger))'
+const GRID = 'rgb(var(--cs-border))'
+const MUTED = 'rgb(var(--cs-muted))'
+const MONO = 'var(--font-plex-mono), ui-monospace, monospace'
 
 interface ChainChartRow {
   chain: string
@@ -32,7 +34,7 @@ export function ChainBarChart({ data, weakestChain }: ChainBarChartProps) {
   const chartData: ChainChartRow[] = data
     .slice()
     .sort((a, b) => b.prAuc - a.prAuc)
-    .map(d => ({
+    .map((d) => ({
       chain: d.chain,
       prAucPct: Math.round(d.prAuc * 1000) / 10,
       n: d.n,
@@ -40,35 +42,50 @@ export function ChainBarChart({ data, weakestChain }: ChainBarChartProps) {
     }))
 
   const summary = chartData
-    .map(d => `${d.chain}: ${d.prAucPct} percent PR-AUC, ${d.positives} of ${d.n} borrowers liquidated`)
+    .map((d) => `${d.chain}: ${d.prAucPct} percent PR-AUC, ${d.positives} of ${d.n} borrowers liquidated`)
     .join('. ')
 
   return (
     <div
-      className="w-full h-72"
+      className="h-80 w-full"
       role="img"
       aria-label={`Bar chart of PR-AUC by chain, sorted highest to lowest. ${summary}. The weakest slice is ${weakestChain}.`}
     >
       <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={chartData} margin={{ top: 8, right: 8, left: 0, bottom: 8 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke={GRID} vertical={false} />
-          <XAxis dataKey="chain" stroke={MUTED} fontSize={12} tickLine={false} tickMargin={8} />
+        <BarChart data={chartData} margin={{ top: 12, right: 8, left: 0, bottom: 8 }} barCategoryGap="28%">
+          <CartesianGrid stroke={GRID} vertical={false} />
+          <XAxis
+            dataKey="chain"
+            stroke={MUTED}
+            tick={{ fill: MUTED, fontSize: 11, fontFamily: MONO }}
+            tickLine={false}
+            axisLine={{ stroke: INK }}
+            tickMargin={10}
+          />
           <YAxis
             stroke={MUTED}
-            fontSize={12}
+            tick={{ fill: MUTED, fontSize: 11, fontFamily: MONO }}
             tickLine={false}
+            axisLine={false}
             domain={[0, 100]}
             tickFormatter={(value: number) => `${value}%`}
           />
           <Tooltip
-            contentStyle={{ background: '#0D1117', border: `1px solid ${GRID}`, borderRadius: 8, fontSize: 12 }}
-            labelStyle={{ color: TEXT }}
-            itemStyle={{ color: TEXT }}
+            cursor={{ fill: 'rgb(var(--cs-text) / 0.05)' }}
+            contentStyle={{
+              background: 'rgb(var(--cs-bg))',
+              border: '1px solid rgb(var(--cs-border))',
+              borderRadius: 0,
+              fontSize: 12,
+              fontFamily: MONO,
+            }}
+            labelStyle={{ color: INK }}
+            itemStyle={{ color: INK }}
             formatter={(value: number) => [`${value}%`, 'PR-AUC']}
           />
-          <Bar dataKey="prAucPct" radius={[6, 6, 0, 0]} isAnimationActive={false}>
-            {chartData.map(row => (
-              <Cell key={row.chain} fill={row.chain === weakestChain ? DANGER : ACCENT} />
+          <Bar dataKey="prAucPct" radius={0} maxBarSize={72} isAnimationActive={false}>
+            {chartData.map((row) => (
+              <Cell key={row.chain} fill={row.chain === weakestChain ? DANGER : INK} />
             ))}
           </Bar>
         </BarChart>

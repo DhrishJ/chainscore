@@ -1,6 +1,6 @@
 'use client'
 import dynamic from 'next/dynamic'
-import { useEvmReady } from './EvmGate'
+import { useEvmGate } from './EvmGate'
 
 // Client-only, lazily loaded Solana connect button. ssr:false keeps the heavy
 // wallet-adapter tree out of the server render; gating on the EvmGate signal
@@ -14,7 +14,19 @@ const SolanaWalletIsland = dynamic(() => import('@/components/SolanaWalletIsland
 })
 
 export function LazySolanaButton() {
-  const ready = useEvmReady()
-  if (!ready) return <div className="h-9 w-9" aria-hidden="true" />
+  const { ready, require } = useEvmGate()
+  // Static lookalike until the wallet subtrees mount; a press arms them
+  // (D-032: a second press may be needed if it beats the chunk load).
+  if (!ready) {
+    return (
+      <button
+        type="button"
+        onClick={require}
+        className="t-label h-9 border border-text/25 px-3 text-muted transition-colors hover:border-text/60 hover:text-text"
+      >
+        Solana
+      </button>
+    )
+  }
   return <SolanaWalletIsland />
 }

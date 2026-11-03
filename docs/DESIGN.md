@@ -2,143 +2,147 @@
 
 This document describes the design tokens and conventions that actually exist
 in this codebase today (`tailwind.config.ts`, `app/globals.css`,
-`components/ScoreBadge.tsx`). It is a reference, not an aspiration, update it
-when the tokens change.
+`lib/site/scoreTier.ts`, `lib/three/`). It is a reference, not an
+aspiration; update it when the tokens change.
+
+## Concept: the instrument
+
+ChainScore is presented as a precision instrument for credit: CS-1, a panel
+gauge modeled in code (`lib/three/instrument.ts`), and a site that reads like
+its spec sheet. The register is honest, functional design: laboratory
+instruments, engineering drawings, Swiss editorial layout. In practice that
+means warm paper and printer's ink, one ultramarine signal colour, hairline
+rules instead of cards, numbered sections, figure captions, square controls,
+and real data in every visual. No gradients, glows, glass cards, or emoji.
 
 ## Color tokens
 
-Defined in `tailwind.config.ts` under `theme.extend.colors`:
+Every colour is a CSS variable (space-separated RGB channels) set per theme in
+`app/globals.css` and consumed by Tailwind as `rgb(var(--cs-x) /
+<alpha-value>)`, so opacity modifiers like `bg-accent/10` work and each theme
+tunes its own contrast. Dark mode is the `.dark` class (`darkMode: ['class']`).
 
-| Token | Value | Mechanism |
+| Token | Paper (light) | Graphite (dark) | Role |
+| --- | --- | --- | --- |
+| `background` | `#F0EEE9` | `#0C0C0B` | Page |
+| `card` | `#E8E5DE` | `#161614` | Recessed surfaces |
+| `border` | `#D0CDC5` | `#2E2D2A` | Opaque hairline (prefer `border-text/15` for rules) |
+| `text` | `#111110` | `#ECEAE4` | Ink |
+| `muted` | `#5C5A54` | `#9E9B93` | Secondary text |
+| `accent` | `#1A3CFF` | `#6B85FF` | The signal: needle, links, active states, grade A |
+| `accent-fg` | `#FFFFFF` | `#0C0C0B` | Text on a solid `accent` fill |
+| `success` | `#1B7140` | `#3FD08A` | Grade B, confirmations |
+| `warning` | `#8F5A00` | `#F2B33D` | Grades C and D, degraded data |
+| `danger` | `#BF2F1C` | `#FF6A4D` | Grade F, liquidations, errors |
+| `ink`, `ink-fg`, `ink-muted`, `ink-accent`, `ink-line`, `ink-green`, `ink-amber` | | | The ink slab: code panels that stay dark in both themes |
+
+Contrast (WCAG 2.1, measured): `text` on `background` 16:1 (paper);
+`muted` 5.9:1 on paper, 7.0:1 on graphite; `accent` 5.8:1 on paper, 6.0:1
+on graphite; `warning` 5.0:1, `danger` 5.0:1, `success` 5.2:1 on paper. On
+solid fills use `accent-fg` (6.7:1 paper, 6.0:1 graphite) or
+`text-background`; never `text-white` on `accent`, which fails in graphite.
+
+Whole sections can be scoped dark by adding the `dark` class to them (the API
+section and the footer do this), since every token is re-declared under
+`.dark`.
+
+## Type
+
+Three families, all self-hosted by `next/font` (CSP `font-src 'self'`):
+
+| Utility / class | Face | Use |
 | --- | --- | --- |
-| `background` | `rgb(var(--cs-bg) / <alpha-value>)` | CSS variable, light/dark |
-| `card` | `rgb(var(--cs-card) / <alpha-value>)` | CSS variable, light/dark |
-| `border` | `rgb(var(--cs-border) / <alpha-value>)` | CSS variable, light/dark |
-| `accent` | `#0052FF` | Static hex, same in both themes |
-| `success` | `#00C879` | Static hex, same in both themes |
-| `warning` | `#FFB800` | Static hex, same in both themes |
-| `danger` | `#FF3B5C` | Static hex, same in both themes |
-| `text` | `rgb(var(--cs-text) / <alpha-value>)` | CSS variable, light/dark |
-| `muted` | `rgb(var(--cs-muted) / <alpha-value>)` | CSS variable, light/dark |
+| `font-sans` (also `font-grotesk`, an alias) | Archivo, variable `wdth` + `wght` | Display, UI, body |
+| `font-serif` | Newsreader, variable `opsz` | The editorial voice (manifesto, ledes) |
+| `font-mono` | IBM Plex Mono 400/500 | Labels, data, code, addresses |
 
-`accent`, `success`, `warning`, and `danger` are fixed hex values so brand and
-risk colors read the same regardless of theme. `background`, `card`,
-`border`, `text`, and `muted` are backed by CSS custom properties (space
-separated RGB channels, consumed via Tailwind's `rgb(var(--x) / <alpha-value>)`
-pattern so `bg-card/60` style opacity modifiers work).
+Composite classes in `app/globals.css`:
 
-The CSS variables are set in `app/globals.css`:
+- `.t-display`: Archivo at 78% width, weight 640, tight tracking. Headlines.
+- `.t-headline`: 84% width, weight 600. Section and card heads.
+- `.t-engraved`: 125% width caps, the engraved-plate voice.
+- `.t-label`: Plex Mono 11px caps, tracked. Figure numbers, captions, data.
+- `.t-serif`: Newsreader with optical sizing.
+- `.t-body`: 17px / 1.6 body copy.
 
-```css
-:root {
-  --cs-bg: 255 255 255;       /* #FFFFFF */
-  --cs-card: 248 250 252;     /* #F8FAFC */
-  --cs-border: 226 232 240;   /* #E2E8F0 */
-  --cs-text: 15 23 42;        /* #0F172A */
-  --cs-muted: 71 85 105;      /* #475569 */
-}
+Archivo's width axis is the signature: condensed for headlines, expanded for
+engraved labels, so one family does the work of two.
 
-.dark {
-  --cs-bg: 10 10 15;          /* #0A0A0F */
-  --cs-card: 13 17 23;        /* #0D1117 */
-  --cs-border: 28 35 51;      /* #1C2333 */
-  --cs-text: 236 240 247;     /* #ECF0F7 */
-  --cs-muted: 148 163 184;    /* #94A3B8 */
-}
-```
+## Layout
 
-Dark mode is toggled by adding/removing the `.dark` class on a parent
-element (`darkMode: ['class']` in `tailwind.config.ts`), not by
-`prefers-color-scheme`. `:root` is the light-mode default; `.dark` overrides
-it.
+- `.frame`: max 1600px with a fluid gutter (`--gutter`, 20px to 48px).
+- 12-column grids with `gap-x-[var(--gutter)]`.
+- Sections open with `SectionLabel` (`components/home/SectionLabel.tsx`): an
+  index like `(06)`, a name, an aside, and a hairline that draws across.
+- Hairline rules (`border-text/15` to `/25`, `/80` for section heads) replace
+  cards. Corners are square (`--radius` is 2px for shadcn primitives).
 
-Separately, `app/globals.css` also defines a full set of shadcn/ui
-compatibility variables (`--background`, `--foreground`, `--primary`,
-`--secondary`, `--muted`, `--accent`, `--destructive`, `--popover`,
-`--border`, `--input`, `--ring`, `--chart-1..5`, `--radius`) as HSL triples,
-consumed by the `foreground`, `popover`, `primary`, `secondary`,
-`destructive`, `input`, `ring`, and `chart` Tailwind color entries. These
-exist for compatibility with unmodified shadcn/ui component internals and
-are a separate token namespace from the `cs-*` ChainScore tokens above.
-Product UI should use the ChainScore tokens (`background`, `card`, `border`,
-`accent`, `success`, `warning`, `danger`, `text`, `muted`); the shadcn tokens
-back `components/ui/*` primitives only.
+## Controls
 
-## Fonts
+- `.btn` with `.btn-ink`, `.btn-signal`, or `.btn-line`: square, mono caps, a
+  fill that wipes up on hover, an arrow that nudges.
+- `.link-u`: hairline underline that draws in from the left.
+- Inputs: one ruled field (`components/WalletInput.tsx`), accent border on
+  focus. Focus rings everywhere: 2px `accent` outline, 3px offset.
 
-Declared in `tailwind.config.ts` under `theme.extend.fontFamily`, all sourced
-from `next/font` CSS variables (set up wherever the fonts are loaded, e.g.
-the root layout):
+## Motion
 
-| Utility | Variable | Fallback |
-| --- | --- | --- |
-| `font-grotesk` | `var(--font-space-grotesk)` | `sans-serif` |
-| `font-sans` | `var(--font-inter)` | `sans-serif` |
-| `font-mono` | `var(--font-jetbrains-mono)` | `ui-monospace, monospace` |
+One clock (`lib/motion/engine.ts`): Lenis smooth scroll on editorial routes
+(wheel only; touch stays native) and every scroll-driven visual tick from the
+same `requestAnimationFrame`. House curve: `cubic-bezier(0.16, 1, 0.3, 1)`.
 
-`font-grotesk` (Space Grotesk) is used for headings/wordmark/emphasis (see
-the `ChainScore` logo lockup in `components/Navbar.tsx`), `font-sans` (Inter)
-is the default body typeface, and `font-mono` (JetBrains Mono) is used for
-addresses, numeric/tabular data, and code-like values.
+- Reveals (`lib/motion/reveal.ts`): `data-reveal` (rise and fade),
+  `data-lines` with `.lm` line masks, `data-rule` (hairline draw),
+  `data-roll` (odometer digits). Only elements below the fold are armed;
+  nothing is hidden without JS.
+- The hero headline enters on transform only (D-032): it is the LCP element.
+- `prefers-reduced-motion`: no Lenis, no reveals, no stage animation (stills
+  instead), and a global CSS net for transitions.
 
-## Border radius
+## 3D
 
-Declared in `tailwind.config.ts` under `theme.extend.borderRadius`, derived
-from the single `--radius` CSS variable (`0.5rem`, set in the shadcn
-`:root` block in `app/globals.css`):
+`lib/three/` holds the procedural models and stages; nothing is downloaded.
 
-| Utility | Value |
-| --- | --- |
-| `rounded-lg` | `var(--radius)` (0.5rem) |
-| `rounded-md` | `calc(var(--radius) - 2px)` |
-| `rounded-sm` | `calc(var(--radius) - 4px)` |
+- `stage.ts`: renderer (Khronos PBR Neutral tone mapping), a studio
+  environment built from emissive panels and prefiltered by PMREM, key and
+  rim lights, a shadow catcher, and a quality tier (`high` / `low`).
+- `instrument.ts` + `textures.ts` + `gear.ts`: CS-1. The dial is printed at
+  the model's score band, grade cutoffs, and the backtest's operating cutoff.
+- `backtest.ts`: one block per holdout borrower, arranged by the confusion
+  matrix at the operating cutoff.
+- `instrumentScene.ts`, `backtestScene.ts`: scroll choreography, written in
+  normalised screen space so poses frame correctly at any aspect ratio.
 
-There is a single radius scale (no separate `xl`/`2xl` custom tokens);
-larger radii in the app use Tailwind's built-in scale (e.g. `rounded-full`
-for pills/badges) directly.
+Stages lazy-load after hydration, render only while on screen, fall back to a
+still (`public/images/cs1-instrument*.webp`) without WebGL, and are
+`aria-hidden` because every number they show is also in the copy. See
+DECISIONS.md D-036 and D-037.
 
 ## Risk-tier color semantics
 
-Grades map to colors consistently across the app (`components/ScoreBadge.tsx`
-is the canonical implementation, mirrored by `lib/format.ts`'s
-`gradeColorClass`):
+`lib/site/scoreTier.ts` is the canonical mapping, pinned to
+`ml/model_meta.json` grade cutoffs by `tests/unit/scoreTier.test.ts`:
 
-| Grade | Meaning | Color token | Text class |
-| --- | --- | --- | --- |
-| `A` | Best | accent | `text-accent` |
-| `B` | Good | accent | `text-accent` |
-| `C` | Fair | warning | `text-warning` |
-| `D` | Weak | warning | `text-warning` |
-| `F` | Poor | danger | `text-danger` |
+| Grade | Tier | Token |
+| --- | --- | --- |
+| `A` | excellent | `accent` |
+| `B` | good | `success` |
+| `C`, `D` | fair | `warning` |
+| `F` | poor | `danger` |
 
-The same tier grouping (A/B, C/D, F) also appears as score-threshold based
-color logic in `app/score/[address]/page.tsx` and
-`components/RecentScoresTicker.tsx` (score `>= 750` -> accent, `>= 550` ->
-warning, else danger), and border/background pairings
-(`border-*/30 bg-*/10`) follow the same three-way split throughout
-(`components/WalletConnectButton.tsx`, `components/SolanaWalletButton.tsx`,
-`app/marketplace/[id]/ListingDetailClient.tsx`, `app/dashboard/page.tsx`).
-
-`success` (`#00C879`) exists as a distinct token from `accent` but is not
-part of the grade mapping, it is reserved for explicit success/confirmation
-states (e.g. "submitted", "connected"), separate from the risk-tier scale.
+The CS-1 dial, the result-page `ScoreGauge`, and the scroll gauge all print
+their grade bands from the same cutoffs with the same tier colours.
 
 ## Usage rules
 
-- Use semantic tokens (`bg-card`, `text-muted`, `border-border`,
-  `text-accent`, etc.), never raw hex codes or arbitrary Tailwind color
-  values, in components.
-- There is one accent color (`#0052FF`, blue). Do not introduce a second
-  "brand" color, if something needs to stand out, use `accent` plus opacity
-  or weight, not a new hue.
-- Risk/grade UI must use the tier colors consistently: A/B -> `accent`,
-  C/D -> `warning`, F -> `danger`. Do not invent a fourth tier color or swap
-  the grouping in a new component, reuse `gradeColorClass` from
-  `lib/format.ts` (or the equivalent logic in `ScoreBadge.tsx`) instead of
-  re-deriving the mapping.
-- `success` is for explicit success/confirmation states only, it is not an
-  alternate spelling of `accent` and is not part of the grade scale.
-- Prefer the CSS-variable-backed tokens (`background`, `card`, `border`,
-  `text`, `muted`) over the shadcn compatibility tokens
-  (`foreground`, `primary`, `secondary`, etc.) in product UI, the shadcn
-  tokens are for `components/ui/*` primitives.
+- Use tokens (`bg-card`, `text-muted`, `border-text/15`, `text-accent`), never
+  raw hex in components. (Exceptions: the WebGL materials and canvas-drawn
+  textures in `lib/three/`, which are physical objects, not UI.)
+- One accent. If something needs to stand out, use `accent`, weight, or size,
+  not a new hue.
+- Reuse `stylesForGrade` / `tierForScore` from `lib/site/scoreTier.ts` for any
+  grade UI rather than re-deriving the mapping.
+- Numbers on public pages come from `lib/site/publicFacts.ts` (Facts
+  Registry) or are computed in `lib/site/modelFacts.ts`; both are pinned by
+  tests.
+- House style: "onchain" is one word; no em dashes.

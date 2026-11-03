@@ -18,9 +18,9 @@ function ConnectPlaceholder({ onPress }: { onPress?: () => void }) {
     <button
       type="button"
       onClick={onPress}
-      className="rounded-xl bg-[#0052FF] px-3.5 py-2 text-sm font-bold text-white transition-transform hover:scale-[1.025]"
+      className="btn btn-ink !min-h-[2.25rem] !gap-3 !px-3.5 !text-[11px]"
     >
-      Connect Wallet
+      <span>Connect wallet</span>
     </button>
   )
 }

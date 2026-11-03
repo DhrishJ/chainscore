@@ -15,7 +15,7 @@ function ScorePill({ score, grade }: { score: number; grade: string }) {
 
   return (
     <span
-      className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium ${color}`}
+      className={`t-label inline-flex items-center gap-1 border px-2 py-1 ${color}`}
     >
       {score}{' '}
       <span className="opacity-60">{grade}</span>
@@ -55,7 +55,38 @@ export default function WalletConnectButtonInner() {
           <ScorePill score={score.score} grade={score.grade} />
         </Link>
       )}
-      <ConnectButton showBalance={false} chainStatus="none" accountStatus="address" />
+      {/* RainbowKit's state machine, rendered in the house style. */}
+      <ConnectButton.Custom>
+        {({ account, chain, openAccountModal, openChainModal, openConnectModal, mounted }) => {
+          const ready = mounted
+          const connected = ready && account && chain
+          if (!ready) return <span className="block h-9 w-[8.5rem]" aria-hidden />
+          if (!connected) {
+            return (
+              <button type="button" onClick={openConnectModal} className="btn btn-ink !min-h-[2.25rem] !gap-3 !px-3.5 !text-[11px]">
+                <span>Connect wallet</span>
+              </button>
+            )
+          }
+          if (chain.unsupported) {
+            return (
+              <button type="button" onClick={openChainModal} className="btn btn-line !min-h-[2.25rem] !px-3.5 !text-[11px] !text-danger">
+                <span>Wrong network</span>
+              </button>
+            )
+          }
+          return (
+            <button
+              type="button"
+              onClick={openAccountModal}
+              className="t-label flex h-9 items-center gap-2 border border-text/25 px-3 text-text transition-colors hover:border-text/60"
+            >
+              <span className="inline-block h-1.5 w-1.5 bg-success" aria-hidden />
+              {account.displayName}
+            </button>
+          )
+        }}
+      </ConnectButton.Custom>
     </div>
   )
 }

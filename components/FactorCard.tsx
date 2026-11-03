@@ -16,10 +16,10 @@ export function FactorCard({ factor }: FactorCardProps) {
   const pct = factor.rawScore
 
   return (
-    <div className="rounded-2xl bg-card border border-border p-5 flex flex-col gap-3">
+    <div className="flex flex-col gap-3 border border-text/15 bg-card/40 p-5">
       <div className="flex items-start justify-between gap-2">
         <div>
-          <h3 className="font-semibold text-text font-grotesk text-sm sm:text-base">
+          <h3 className="t-headline text-xl text-text">
             {factor.name}
           </h3>
           <p className="text-muted text-xs mt-0.5">
@@ -28,11 +28,11 @@ export function FactorCard({ factor }: FactorCardProps) {
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
           {factor.limitedData && (
-            <span className="px-2 py-0.5 rounded-full bg-warning/10 text-warning text-xs border border-warning/30">
+            <span className="t-label border border-warning/40 bg-warning/10 px-2 py-0.5 text-warning">
               Limited Data
             </span>
           )}
-          <span className="text-xl font-bold font-grotesk text-text">
+          <span className="t-headline tnum text-2xl text-text">
             {factor.rawScore}
             <span className="text-muted text-sm font-normal">/100</span>
           </span>
@@ -40,9 +40,9 @@ export function FactorCard({ factor }: FactorCardProps) {
       </div>
 
       {/* Progress bar */}
-      <div className="h-2 rounded-full bg-border overflow-hidden">
+      <div className="h-1.5 overflow-hidden bg-text/10">
         <div
-          className={`h-full rounded-full transition-all duration-700 ${barColor(pct)}`}
+          className={`h-full transition-all duration-700 ${barColor(pct)}`}
           style={{ width: `${pct}%` }}
         />
       </div>

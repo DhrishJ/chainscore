@@ -137,7 +137,7 @@ function DashboardInner() {
           {score && (
             <div className="rounded-2xl border border-border bg-card p-5 flex items-center gap-4">
               <div className="w-20 h-20 flex-shrink-0">
-                <ScoreGauge score={score.score} />
+                <ScoreGauge score={score.score} className="h-full w-full" />
               </div>
               <div>
                 <p className="text-muted text-xs mb-1">Your ChainScore</p>

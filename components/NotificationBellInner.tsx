@@ -69,7 +69,7 @@ export default function NotificationBellInner() {
           />
         </svg>
         {unread > 0 && (
-          <span className="absolute top-1 right-1 w-4 h-4 rounded-full bg-danger text-white text-xs flex items-center justify-center font-bold leading-none">
+          <span className="absolute top-1 right-1 w-4 h-4 rounded-full bg-danger text-background text-xs flex items-center justify-center font-bold leading-none">
             {unread > 9 ? '9+' : unread}
           </span>
         )}

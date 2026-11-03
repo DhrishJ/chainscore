@@ -4,7 +4,9 @@ import { ConnectionProvider, WalletProvider } from '@solana/wallet-adapter-react
 import { WalletModalProvider } from '@solana/wallet-adapter-react-ui'
 import { PhantomWalletAdapter } from '@solana/wallet-adapter-phantom'
 import { SolflareWalletAdapter } from '@solana/wallet-adapter-solflare'
-import '@solana/wallet-adapter-react-ui/styles.css'
+// Vendored copy without the remote Google Fonts @import (see file header):
+// a blocked font request used to crash the whole app via ChunkLoadError.
+import './solana-wallet-adapter.css'
 
 export function SolanaWalletProvider({ children }: { children: React.ReactNode }) {
   const wallets = useMemo(
