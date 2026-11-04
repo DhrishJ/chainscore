@@ -5,20 +5,19 @@ import { usePathname } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import { WalletConnectButton } from './WalletConnectButton'
 import { NotificationBell } from './NotificationBell'
-import { ThemeToggle } from './ThemeToggle'
 import { LazySolanaButton } from './LazySolanaButton'
 import { CommandPalette } from './CommandPalette'
 import { Wordmark } from './site/Logo'
 
 const LINKS = [
-  { href: '/retrospective', label: 'Retrospective' },
-  { href: '/pricing', label: 'Pricing' },
+  { href: '/retrospective', label: 'Backtest' },
   { href: '/#api', label: 'API' },
+  { href: '/pricing', label: 'Pricing' },
   { href: '/dashboard', label: 'Dashboard' },
-  { href: '/marketplace', label: 'Marketplace', note: 'Preview' },
+  { href: '/marketplace', label: 'Marketplace', note: 'preview' },
 ]
 
-// Transparent over the page, a paper strip once scrolled. It steps out of
+// Transparent over the page, solid black once scrolled. It steps out of
 // the way while reading down and returns on the first scroll up.
 export function Navbar() {
   const pathname = usePathname()
@@ -78,15 +77,13 @@ export function Navbar() {
         className={`fixed inset-x-0 top-0 z-50 transition-[transform,background-color,border-color] duration-500 ease-out ${
           hidden && !mobileOpen ? '-translate-y-full' : 'translate-y-0'
         } ${
-          scrolled || mobileOpen
-            ? 'border-b border-text/10 bg-background/85 backdrop-blur-md supports-[backdrop-filter]:bg-background/70'
-            : 'border-b border-transparent'
+          scrolled || mobileOpen ? 'border-b border-text/10 bg-background' : 'border-b border-transparent'
         }`}
       >
         <CommandPalette />
         <div className="frame flex h-[var(--nav-h)] items-center justify-between gap-6">
           <div className="flex items-center gap-10">
-            <Link href="/" className="text-text transition-colors hover:text-accent" aria-label="ChainScore home">
+            <Link href="/" className="text-text" aria-label="ChainScore home">
               <Wordmark />
             </Link>
             <ul className="hidden items-center gap-7 lg:flex">
@@ -95,18 +92,18 @@ export function Navbar() {
                   <Link
                     href={l.href}
                     aria-current={isActive(l.href) ? 'page' : undefined}
-                    className={`t-label link-u py-1 transition-colors ${isActive(l.href) ? 'text-text' : 'text-muted hover:text-text'}`}
+                    className={`py-1 text-[0.9375rem] tracking-[-0.01em] transition-colors ${
+                      isActive(l.href) ? 'text-text underline decoration-1 underline-offset-[0.4em]' : 'text-muted hover:text-text'
+                    }`}
                   >
-                    {isActive(l.href) && <span className="mr-1.5 inline-block h-1.5 w-1.5 -translate-y-px bg-accent" aria-hidden />}
                     {l.label}
-                    {l.note && <span className="ml-1.5 text-muted/80">({l.note})</span>}
+                    {l.note && <span className="ml-1 text-muted">({l.note})</span>}
                   </Link>
                 </li>
               ))}
             </ul>
           </div>
           <div className="flex items-center gap-1.5 sm:gap-2">
-            <ThemeToggle />
             {wide && <LazySolanaButton />}
             <NotificationBell />
             {wide && <WalletConnectButton />}
@@ -137,24 +134,23 @@ export function Navbar() {
       {/* Full-screen menu for small screens. */}
       <div
         id="mobile-menu"
-        className={`fixed inset-0 z-40 bg-background transition-[clip-path] duration-700 ease-in-out-quart lg:hidden ${
-          mobileOpen ? '[clip-path:inset(0_0_0_0)]' : 'pointer-events-none [clip-path:inset(0_0_100%_0)]'
+        className={`fixed inset-0 z-40 bg-background transition-opacity duration-300 lg:hidden ${
+          mobileOpen ? 'opacity-100' : 'pointer-events-none opacity-0'
         }`}
         aria-hidden={!mobileOpen}
       >
         <div className="frame flex h-full flex-col pb-8 pt-[calc(var(--nav-h)+2rem)]">
-          <ul className="border-t border-text/80">
-            {LINKS.map((l, i) => (
+          <ul className="border-t border-text/15">
+            {LINKS.map((l) => (
               <li key={l.href} className="border-b border-text/15">
                 <Link
                   href={l.href}
                   tabIndex={mobileOpen ? 0 : -1}
                   onClick={() => setMobileOpen(false)}
-                  className="flex items-baseline gap-4 py-3"
+                  className="flex items-baseline justify-between gap-4 py-4"
                 >
-                  <span className="t-label text-muted">0{i + 1}</span>
-                  <span className="t-display text-[clamp(2.75rem,12vw,4.5rem)] text-text">{l.label}</span>
-                  {l.note && <span className="t-label text-muted">({l.note})</span>}
+                  <span className="t-headline text-[2.25rem] text-text">{l.label}</span>
+                  {l.note && <span className="t-label text-muted">{l.note}</span>}
                 </Link>
               </li>
             ))}

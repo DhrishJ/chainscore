@@ -2,12 +2,12 @@ import { test, expect } from '@playwright/test'
 import AxeBuilder from '@axe-core/playwright'
 
 // Accessibility regression gate (Workstream A). Runs axe against the pages
-// that render without external data (home and the backtest-backed
-// retrospective). Serious and critical violations fail CI. Score/marketplace
+// that render without external data (home, the backtest-backed
+// retrospective, and pricing). Serious and critical violations fail CI. Score/marketplace
 // pages depend on live providers and a database, so they are exercised by
 // manual review and the unit suite rather than a headless a11y crawl here.
 
-const PAGES = ['/', '/retrospective']
+const PAGES = ['/', '/retrospective', '/pricing']
 
 for (const path of PAGES) {
   test(`no serious or critical axe violations on ${path}`, async ({ page }) => {

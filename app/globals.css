@@ -3,57 +3,33 @@
 @tailwind utilities;
 
 /* ChainScore tokens. Space-separated RGB channels, consumed by Tailwind as
-   rgb(var(--cs-x) / <alpha-value>). Every text pairing below clears WCAG AA
-   (4.5:1) on both bg and card; docs/DESIGN.md lists the ratios.
-
-   Light theme, "paper": warm stock, printer's ink, one ultramarine signal,
-   and the three printed-instrument risk tones. */
-:root {
-  --cs-bg: 240 238 233;        /* #F0EEE9 paper */
-  --cs-card: 232 229 222;      /* #E8E5DE paper, one step down */
-  --cs-border: 208 205 197;    /* #D0CDC5 hairline */
-  --cs-text: 17 17 16;         /* #111110 ink */
-  --cs-muted: 92 90 84;        /* #5C5A54 graphite pencil */
-  --cs-accent: 26 60 255;      /* #1A3CFF ultramarine signal */
-  --cs-accent-fg: 255 255 255;
-  --cs-success: 27 113 64;     /* #1B7140 */
-  --cs-warning: 143 90 0;      /* #8F5A00 ochre */
-  --cs-danger: 191 47 28;      /* #BF2F1C vermilion */
-  /* Ink slab: stays dark in both themes. */
-  --cs-ink: 17 17 16;
-  --cs-ink-fg: 240 238 233;
-  --cs-ink-muted: 165 162 154;
-  --cs-ink-accent: 125 147 255;
-  --cs-ink-line: 52 51 47;
-  --cs-ink-green: 159 215 168;
-  --cs-ink-amber: 242 179 61;
-
-  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
-  --ease-in-out: cubic-bezier(0.76, 0, 0.24, 1);
-  --gutter: clamp(1.25rem, 3.2vw, 3rem);
-  --nav-h: 3.5rem;
-  color-scheme: light;
-}
-
-/* Dark theme, "graphite": the same instrument at night. */
+   rgb(var(--cs-x) / <alpha-value>). One theme: the studio black the
+   calibre photographs are lit against, so the renders sit on the page
+   with no visible edge. Contrast ratios are listed in docs/DESIGN.md. */
+:root,
 .dark {
-  --cs-bg: 12 12 11;           /* #0C0C0B */
-  --cs-card: 22 22 20;         /* #161614 */
-  --cs-border: 46 45 42;       /* #2E2D2A */
-  --cs-text: 236 234 228;      /* #ECEAE4 */
-  --cs-muted: 158 155 147;     /* #9E9B93 */
-  --cs-accent: 107 133 255;    /* #6B85FF */
-  --cs-accent-fg: 12 12 11;
-  --cs-success: 63 208 138;    /* #3FD08A */
-  --cs-warning: 242 179 61;    /* #F2B33D */
-  --cs-danger: 255 106 77;     /* #FF6A4D */
-  --cs-ink: 22 22 20;
-  --cs-ink-fg: 236 234 228;
-  --cs-ink-muted: 158 155 147;
-  --cs-ink-accent: 107 133 255;
-  --cs-ink-line: 52 51 47;
-  --cs-ink-green: 159 215 168;
-  --cs-ink-amber: 242 179 61;
+  --cs-bg: 11 11 12;           /* #0B0B0C studio black, matches the renders */
+  --cs-card: 19 19 20;         /* #131314 one step up */
+  --cs-border: 46 46 47;       /* #2E2E2F hairline */
+  --cs-text: 236 234 229;      /* #ECEAE5 */
+  --cs-muted: 154 151 144;     /* #9A9790, 6.7:1 on bg */
+  --cs-accent: 236 234 229;    /* monochrome: the photographs carry colour */
+  --cs-accent-fg: 11 11 12;
+  --cs-success: 126 200 156;   /* #7EC89C */
+  --cs-warning: 226 180 96;    /* #E2B460 */
+  --cs-danger: 233 92 104;     /* #E95C68 ruby, 5.8:1 on bg */
+  --cs-ink: 17 17 18;
+  --cs-ink-fg: 236 234 229;
+  --cs-ink-muted: 154 151 144;
+  --cs-ink-accent: 236 234 229;
+  --cs-ink-line: 46 46 47;
+  --cs-ink-green: 126 200 156;
+  --cs-ink-amber: 226 180 96;
+
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --gutter: clamp(1.25rem, 2.8vw, 2.75rem);
+  --nav-h: 3.75rem;
   color-scheme: dark;
 }
 
@@ -65,9 +41,8 @@
   margin: 0;
 }
 
-/* overflow-x: clip, not hidden. `hidden` on body makes body a scroll
-   container, which silently breaks every position: sticky inside it
-   (the navbar and the pinned 3D stages). `clip` trims without that. */
+/* overflow-x: clip, not hidden: `hidden` on body would make it a scroll
+   container and break position: sticky (the navbar, the calibre plates). */
 html,
 body {
   max-width: 100vw;
@@ -77,17 +52,11 @@ body {
 html {
   -webkit-text-size-adjust: 100%;
   text-rendering: optimizeLegibility;
+  background: rgb(var(--cs-bg));
 }
 
 body {
-  /* Paper grain. Behind content, so it costs nothing per frame. */
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.55 0'/%3E%3C/filter%3E%3Crect width='240' height='240' filter='url(%23n)' opacity='0.09'/%3E%3C/svg%3E");
-  background-repeat: repeat;
-  font-feature-settings: 'ss01' 0;
-}
-
-.dark body {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.5 0'/%3E%3C/filter%3E%3Crect width='240' height='240' filter='url(%23n)' opacity='0.05'/%3E%3C/svg%3E");
+  font-feature-settings: 'kern' 1;
 }
 
 a {
@@ -96,144 +65,120 @@ a {
 }
 
 ::selection {
-  background: rgb(var(--cs-accent));
-  color: rgb(var(--cs-accent-fg));
+  background: rgb(var(--cs-text));
+  color: rgb(var(--cs-bg));
 }
 
 :focus-visible {
-  outline: 2px solid rgb(var(--cs-accent));
+  outline: 1.5px solid rgb(var(--cs-text));
   outline-offset: 3px;
 }
 
-/* Lenis smooth scroll (lib/motion/scroll.ts). */
-html.lenis,
-html.lenis body {
-  height: auto;
-}
-.lenis.lenis-smooth {
-  scroll-behavior: auto !important;
-}
-.lenis.lenis-smooth [data-lenis-prevent] {
-  overscroll-behavior: contain;
-}
-.lenis.lenis-stopped {
-  overflow: hidden;
+img {
+  display: block;
+  max-width: 100%;
 }
 
 @layer components {
-  /* ---------- Type ---------- */
+  /* ---------- Type: one family, Schibsted Grotesk ---------- */
 
-  /* Condensed display. The width axis is the house signature. */
   .t-display {
-    font-family: var(--font-archivo), ui-sans-serif, system-ui, sans-serif;
-    font-stretch: 78%;
-    font-weight: 640;
-    letter-spacing: -0.04em;
-    line-height: 0.88;
+    font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+    font-weight: 500;
+    letter-spacing: -0.042em;
+    line-height: 0.93;
+    text-wrap: balance;
   }
 
   .t-headline {
-    font-family: var(--font-archivo), ui-sans-serif, system-ui, sans-serif;
-    font-stretch: 84%;
-    font-weight: 600;
+    font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+    font-weight: 500;
     letter-spacing: -0.03em;
-    line-height: 0.96;
+    line-height: 1.02;
+    text-wrap: balance;
   }
 
-  /* Expanded caps, the engraved-plate voice: labels, plates, readouts. */
-  .t-engraved {
-    font-family: var(--font-archivo), ui-sans-serif, system-ui, sans-serif;
-    font-stretch: 125%;
-    font-weight: 600;
-    font-size: 0.6875rem;
-    line-height: 1.3;
-    letter-spacing: 0.09em;
-    text-transform: uppercase;
-  }
-
-  /* Mono annotation: figure numbers, coordinates, data. */
-  .t-label {
-    font-family: var(--font-plex-mono), ui-monospace, monospace;
-    font-size: 0.6875rem;
-    line-height: 1.45;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-  }
-
-  /* The editorial voice. Optical sizing picks the display cut at size. */
+  /* Kept for older pages: the former serif voice now reads in the house
+     face at a lighter weight. */
   .t-serif {
-    font-family: var(--font-newsreader), Georgia, ui-serif, serif;
-    font-weight: 380;
-    letter-spacing: -0.022em;
-    line-height: 1.04;
-    font-optical-sizing: auto;
+    font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+    font-weight: 400;
+    letter-spacing: -0.025em;
+    line-height: 1.12;
+  }
+
+  /* Small print: captions, table heads, field labels. Sentence case, no
+     tracking games. */
+  .t-label,
+  .t-engraved {
+    font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+    font-size: 0.8125rem;
+    line-height: 1.45;
+    letter-spacing: 0;
+    font-weight: 400;
   }
 
   .t-body {
     font-size: 1.0625rem;
-    line-height: 1.6;
+    line-height: 1.58;
+    letter-spacing: -0.006em;
     text-wrap: pretty;
+  }
+
+  .t-code {
+    font-family: var(--font-mono), ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.8125rem;
+    line-height: 1.7;
   }
 
   /* ---------- Layout ---------- */
 
   .frame {
     width: 100%;
-    max-width: 1600px;
+    max-width: 1680px;
     margin-inline: auto;
     padding-inline: var(--gutter);
   }
 
+  .rule {
+    border-top: 1px solid rgb(var(--cs-text) / 0.14);
+  }
+
   /* ---------- Links and buttons ---------- */
 
-  /* Hairline underline that draws in from the left on hover. */
+  /* Underline that is always there, thinner at rest. */
   .link-u {
-    background-image: linear-gradient(currentColor, currentColor);
-    background-size: 0% 1px;
-    background-position: 100% 100%;
-    background-repeat: no-repeat;
-    transition: background-size 0.6s var(--ease-out);
+    text-decoration-line: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.28em;
+    text-decoration-color: rgb(var(--cs-text) / 0.35);
+    transition: text-decoration-color 0.3s var(--ease-out);
   }
   .link-u:hover,
   .link-u:focus-visible {
-    background-size: 100% 1px;
-    background-position: 0% 100%;
+    text-decoration-color: currentColor;
   }
 
-  /* Square, ink-filled control with a fill that wipes up on hover. */
   .btn {
     position: relative;
     display: inline-flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 1.25rem;
+    justify-content: center;
+    gap: 0.75rem;
     min-height: 3rem;
-    padding: 0 1.1rem;
-    font-family: var(--font-plex-mono), ui-monospace, monospace;
-    font-size: 0.75rem;
+    padding: 0 1.35rem;
+    font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+    font-size: 0.9375rem;
     font-weight: 500;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    isolation: isolate;
-    overflow: hidden;
-    transition: color 0.45s var(--ease-out), border-color 0.45s var(--ease-out);
+    letter-spacing: -0.005em;
+    border-radius: 0;
+    transition: background-color 0.3s var(--ease-out), color 0.3s var(--ease-out),
+      border-color 0.3s var(--ease-out);
     -webkit-tap-highlight-color: transparent;
-  }
-  .btn::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    z-index: -1;
-    transform: translate3d(0, 101%, 0);
-    transition: transform 0.55s var(--ease-out);
-  }
-  .btn:hover::before,
-  .btn:focus-visible::before {
-    transform: translate3d(0, 0, 0);
   }
   .btn .btn-arrow {
     display: inline-block;
-    transition: transform 0.55s var(--ease-out);
+    transition: transform 0.4s var(--ease-out);
   }
   .btn:hover .btn-arrow {
     transform: translate3d(3px, 0, 0);
@@ -242,57 +187,40 @@ html.lenis body {
     opacity: 0.45;
     cursor: not-allowed;
   }
-  .btn:disabled::before {
-    display: none;
-  }
 
-  .btn-ink {
+  /* Solid light on black: the primary action. */
+  .btn-ink,
+  .btn-signal {
     background: rgb(var(--cs-text));
     color: rgb(var(--cs-bg));
-  }
-  .btn-ink::before {
-    background: rgb(var(--cs-accent));
   }
   .btn-ink:hover,
-  .btn-ink:focus-visible {
-    color: rgb(var(--cs-accent-fg));
-  }
-
-  .btn-signal {
-    background: rgb(var(--cs-accent));
-    color: rgb(var(--cs-accent-fg));
-  }
-  .btn-signal::before {
-    background: rgb(var(--cs-text));
-  }
   .btn-signal:hover,
+  .btn-ink:focus-visible,
   .btn-signal:focus-visible {
-    color: rgb(var(--cs-bg));
+    background: rgb(255 255 255);
   }
 
   .btn-line {
-    border: 1px solid rgb(var(--cs-text) / 0.85);
+    border: 1px solid rgb(var(--cs-text) / 0.3);
     color: rgb(var(--cs-text));
-  }
-  .btn-line::before {
-    background: rgb(var(--cs-text));
   }
   .btn-line:hover,
   .btn-line:focus-visible {
-    color: rgb(var(--cs-bg));
+    border-color: rgb(var(--cs-text));
   }
 
-  /* Inputs: a ruled field, not a pill. */
+  /* Inputs: a ruled field. Addresses are code, so the field is mono. */
   .field {
     width: 100%;
     min-height: 3rem;
-    padding: 0 0.9rem;
-    background: rgb(var(--cs-bg) / 0.65);
-    border: 1px solid rgb(var(--cs-text) / 0.28);
+    padding: 0 1rem;
+    background: rgb(var(--cs-bg));
+    border: 1px solid rgb(var(--cs-text) / 0.24);
     color: rgb(var(--cs-text));
-    font-family: var(--font-plex-mono), ui-monospace, monospace;
+    font-family: var(--font-mono), ui-monospace, monospace;
     font-size: 0.875rem;
-    transition: border-color 0.3s var(--ease-out), background-color 0.3s var(--ease-out);
+    transition: border-color 0.3s var(--ease-out);
     border-radius: 0;
     outline: none;
   }
@@ -300,11 +228,10 @@ html.lenis body {
     color: rgb(var(--cs-muted));
   }
   .field:hover {
-    border-color: rgb(var(--cs-text) / 0.5);
+    border-color: rgb(var(--cs-text) / 0.45);
   }
   .field:focus {
-    border-color: rgb(var(--cs-accent));
-    background: rgb(var(--cs-bg));
+    border-color: rgb(var(--cs-text));
   }
 }
 
@@ -321,105 +248,20 @@ html.lenis body {
 }
 
 /* ---------- Motion ----------
-   Progressive enhancement throughout: nothing is hidden unless lib/motion
-   armed it (html.motion), so no-JS and reduced-motion readers get the
-   finished page. Above-the-fold copy never uses an opacity gate (D-032):
-   the hero rises on transform alone. */
+   Kept to three things: the hero plate settles once on load, the calibre
+   images drift with the scroll (transform only), and the exploded
+   sequence follows the scroll. Text never animates. */
 
-/* Reveals wipe in behind a mask and rise; they never fade. Text is either
-   masked or at full colour, so no frame of a reveal is low contrast (for
-   readers, magnifiers, and the axe gate). Once settled (is-done), the mask
-   is dropped so focus rings and tooltips are never cropped. */
-.motion [data-reveal] {
-  transition:
-    clip-path 1.15s var(--ease-out),
-    transform 1.15s var(--ease-out);
-  transition-delay: var(--d, 0ms);
-}
-.motion [data-reveal].is-armed {
-  clip-path: inset(0 0 0 0);
-}
-.motion [data-reveal].is-armed:not(.is-in) {
-  clip-path: inset(100% 0 0 0);
-  transform: translate3d(0, 1.75rem, 0);
-}
-.motion [data-reveal].is-armed.is-done {
-  clip-path: none;
-}
-
-/* Line masks: each line slides up out of its own clip. */
-.lm {
-  display: block;
-  overflow: hidden;
-  padding-bottom: 0.12em;
-  margin-bottom: -0.12em;
-}
-.lm > span {
-  display: block;
-  transition: transform 1.25s var(--ease-out);
-  transition-delay: var(--d, 0ms);
-}
-.motion [data-lines].is-armed:not(.is-in) .lm > span {
-  transform: translate3d(0, 108%, 0);
-}
-
-/* Hairline rules that draw across when they enter. */
-.motion [data-rule] {
-  transform-origin: 0 50%;
-  transition: transform 1.4s var(--ease-out);
-  transition-delay: var(--d, 0ms);
-}
-.motion [data-rule].is-armed:not(.is-in) {
-  transform: scaleX(0);
-}
-
-/* Hero entrance: transform only, never opacity (LCP, D-032). */
-@keyframes cs-rise-lcp {
+@keyframes cs-settle {
   from {
-    transform: translate3d(0, 0.32em, 0);
+    transform: scale(1.045);
   }
   to {
-    transform: translate3d(0, 0, 0);
+    transform: scale(1);
   }
 }
-.cs-rise-lcp {
-  animation: cs-rise-lcp 1.2s var(--ease-out) both;
-  animation-delay: var(--d, 0ms);
-}
-
-@keyframes cs-rise {
-  from {
-    opacity: 0;
-    transform: translateY(12px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-.cs-rise {
-  animation: cs-rise 0.7s var(--ease-out) both;
-}
-
-@keyframes cs-draw {
-  from {
-    stroke-dashoffset: 314;
-  }
-}
-.cs-arc {
-  animation: cs-draw 1.6s var(--ease-out) forwards;
-}
-
-@keyframes cs-marquee {
-  from {
-    transform: translate3d(0, 0, 0);
-  }
-  to {
-    transform: translate3d(-50%, 0, 0);
-  }
-}
-.cs-marquee {
-  animation: cs-marquee var(--marquee-duration, 48s) linear infinite;
+.cs-settle {
+  animation: cs-settle 2.2s var(--ease-out) both;
 }
 
 @keyframes cs-blink {
@@ -436,125 +278,29 @@ html.lenis body {
   animation: cs-blink 1.1s steps(1) infinite;
 }
 
-@keyframes cs-tick {
-  0% {
-    transform: scaleY(0);
-    transform-origin: 50% 0;
-  }
-  45% {
-    transform: scaleY(1);
-    transform-origin: 50% 0;
-  }
-  55% {
-    transform: scaleY(1);
-    transform-origin: 50% 100%;
-  }
-  100% {
-    transform: scaleY(0);
-    transform-origin: 50% 100%;
-  }
-}
-.cs-scroll-tick {
-  animation: cs-tick 2.4s var(--ease-in-out) infinite;
-}
-
-/* The still of CS-1 (public/images/cs1-instrument*.webp), placed where the
-   live instrument's hero pose puts it (lib/three/instrumentScene.ts
-   poses()). The render frames the dial at 94.7% of the image, hence the
-   size / 0.947. */
-.cs1-poster {
-  position: absolute;
-  left: 72%;
-  top: 51%;
-  width: 71.8svh;
-  height: 71.8svh;
-  transform: translate(-50%, -50%);
-}
-@media (max-aspect-ratio: 5/4) {
-  .cs1-poster {
-    left: 70%;
-    top: 47%;
-    width: 52.8svh;
-    height: 52.8svh;
-  }
-}
-@media (max-aspect-ratio: 17/20) {
-  .cs1-poster {
-    left: 50%;
-    top: 35%;
-    width: 42.2svh;
-    height: 42.2svh;
-  }
-}
-
-/* A request travelling the process line (components/home/Process). Only
-   an absolutely positioned 7px dot moves, so `left` costs nothing. */
-@keyframes cs-pulse {
-  0% {
-    left: 0%;
+@keyframes cs-rise {
+  from {
     opacity: 0;
+    transform: translateY(8px);
   }
-  10% {
+  to {
     opacity: 1;
-  }
-  90% {
-    opacity: 1;
-  }
-  100% {
-    left: 100%;
-    opacity: 0;
+    transform: translateY(0);
   }
 }
-.cs-pulse {
-  animation: cs-pulse 4.2s var(--ease-in-out) infinite;
+.cs-rise {
+  animation: cs-rise 0.5s var(--ease-out) both;
 }
 
-/* Odometer digits (components/home/RollingNumber). Each strip is 10em
-   tall; translating by -10% per unit shows one digit per em. */
-.roll-cell {
-  display: inline-block;
-  height: 1em;
-  overflow: hidden;
-  vertical-align: top;
-  line-height: 1;
-}
-.roll-strip {
-  display: flex;
-  flex-direction: column;
-  transform: translate3d(0, calc(var(--d, 0) * -10%), 0);
-  transition: transform 1.9s var(--ease-out);
-  transition-delay: var(--delay, 0ms);
-}
-.roll-strip > span {
-  display: block;
-  height: 1em;
-  line-height: 1;
-}
-.motion [data-roll].is-armed:not(.is-in) .roll-strip {
-  transform: translate3d(0, 0, 0);
-}
-
-/* Manifesto: words brighten as the reader passes them. Armed only after
-   the first scroll (lib/motion). The floor is 50%: even unread words stay
-   above WCAG's 3:1 for large text in both themes. */
-.motion.has-scrolled [data-words] .w {
-  opacity: clamp(0.5, calc(var(--p, 0) - var(--i) + 0.5), 1);
-  transition: opacity 0.2s linear;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .cs-rise,
-  .cs-rise-lcp,
-  .cs-arc,
-  .cs-marquee,
-  .cs-scroll-tick,
-  .cs-pulse {
-    animation: none;
+@keyframes cs-draw {
+  from {
+    stroke-dashoffset: 314;
   }
 }
+.cs-arc {
+  animation: cs-draw 1.6s var(--ease-out) forwards;
+}
 
-/* Respect prefers-reduced-motion globally: near-instant transitions, no
-   animations. Components also gate their own motion; this is the net. */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -566,64 +312,39 @@ html.lenis body {
   }
 }
 
-/* RainbowKit sits in our navbar; square it off to match the house style. */
+/* RainbowKit sits in the navbar; match the house face. */
 [data-rk] button {
-  font-family: var(--font-plex-mono), ui-monospace, monospace !important;
-  letter-spacing: 0.04em;
+  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif !important;
+  letter-spacing: -0.005em;
 }
 
 @layer base {
-  :root {
-    --background: 0 0% 100%;
-    --foreground: 0 0% 3.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 0 0% 3.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 3.9%;
-    --primary: 0 0% 9%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 0 0% 96.1%;
-    --secondary-foreground: 0 0% 9%;
-    --muted: 0 0% 96.1%;
-    --muted-foreground: 0 0% 45.1%;
-    --accent: 0 0% 96.1%;
-    --accent-foreground: 0 0% 9%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 89.8%;
-    --input: 0 0% 89.8%;
-    --ring: 0 0% 3.9%;
-    --chart-1: 12 76% 61%;
-    --chart-2: 173 58% 39%;
-    --chart-3: 197 37% 24%;
-    --chart-4: 43 74% 66%;
-    --chart-5: 27 87% 67%;
-    --radius: 0.125rem;
-  }
+  :root,
   .dark {
-    --background: 0 0% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 0 0% 3.9%;
-    --card-foreground: 0 0% 98%;
-    --popover: 0 0% 3.9%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 0 0% 98%;
-    --primary-foreground: 0 0% 9%;
-    --secondary: 0 0% 14.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 0 0% 14.9%;
-    --muted-foreground: 0 0% 63.9%;
-    --accent: 0 0% 14.9%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 14.9%;
-    --input: 0 0% 14.9%;
-    --ring: 0 0% 83.1%;
-    --chart-1: 220 70% 50%;
-    --chart-2: 160 60% 45%;
-    --chart-3: 30 80% 55%;
-    --chart-4: 280 65% 60%;
-    --chart-5: 340 75% 55%;
+    --background: 240 4% 4%;
+    --foreground: 40 12% 91%;
+    --card: 240 3% 8%;
+    --card-foreground: 40 12% 91%;
+    --popover: 240 3% 8%;
+    --popover-foreground: 40 12% 91%;
+    --primary: 40 12% 91%;
+    --primary-foreground: 240 4% 4%;
+    --secondary: 240 2% 14%;
+    --secondary-foreground: 40 12% 91%;
+    --muted: 240 2% 14%;
+    --muted-foreground: 40 4% 59%;
+    --accent: 240 2% 14%;
+    --accent-foreground: 40 12% 91%;
+    --destructive: 355 77% 64%;
+    --destructive-foreground: 240 4% 4%;
+    --border: 240 1% 18%;
+    --input: 240 1% 18%;
+    --ring: 40 12% 91%;
+    --chart-1: 40 12% 91%;
+    --chart-2: 145 38% 64%;
+    --chart-3: 38 68% 63%;
+    --chart-4: 355 77% 64%;
+    --chart-5: 40 4% 59%;
+    --radius: 0rem;
   }
 }

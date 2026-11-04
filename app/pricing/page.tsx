@@ -2,6 +2,8 @@ import type { Metadata } from 'next'
 import { PLANS, DEFAULT_OVERAGE_CAP_USD, type Plan } from '@/lib/pricing/plans'
 import { SiteFooter } from '@/components/site/SiteFooter'
 import { BACKTEST, MODEL_VERSION } from '@/lib/site/modelFacts'
+import { ACCELERATOR } from '@/lib/site/publicFacts'
+import { Plate } from '@/components/site/Plate'
 
 // The pricing page renders lib/pricing/plans.ts directly: what the metering
 // layer enforces is exactly what this page shows, by construction (Section
@@ -39,35 +41,36 @@ export default function PricingPage() {
   return (
     <>
       <main className="relative">
-        <section className="frame pb-[8svh] pt-10 sm:pt-14" aria-labelledby="pricing-heading">
-          <div className="grid grid-cols-12 gap-x-[var(--gutter)] border-t border-text/80 pt-3">
-            <p className="t-label col-span-6 text-text sm:col-span-4">(P) Pricing</p>
-            <p className="t-label col-span-6 text-right text-muted sm:col-span-8">
-              Two meters · overage capped by you
+        <section
+          className="frame grid grid-cols-1 gap-x-[var(--gutter)] gap-y-10 pb-[8svh] pt-12 sm:pt-16 lg:grid-cols-12 lg:items-end"
+          aria-labelledby="pricing-heading"
+        >
+          <div className="lg:col-span-7">
+            <p className="t-label text-muted">Two meters, and overage capped by you.</p>
+            <h1 id="pricing-heading" className="t-display mt-6 max-w-[13ch] text-[clamp(3rem,7vw,8rem)] text-text">
+              Pricing that cannot surprise you.
+            </h1>
+            <p className="t-body mt-10 max-w-[56ch] text-muted">
+              Two meters: per-score lookups and monitored wallets with webhooks. Overage only ever accrues up to a cap
+              you set yourself (default ${DEFAULT_OVERAGE_CAP_USD}/month); past it, requests pause instead of billing.
+              Every response carries your live usage in its headers.
             </p>
           </div>
-          <h1 id="pricing-heading" className="t-display mt-12 text-[clamp(3.6rem,9.5vw,11rem)] text-text">
-            <span className="cs-rise-lcp block">Pricing that</span>
-            <span className="cs-rise-lcp block" style={{ ['--d' as string]: '90ms' }}>
-              cannot surprise you<span className="text-accent">.</span>
-            </span>
-          </h1>
-          <p className="t-body mt-10 max-w-[56ch] text-muted">
-            Two meters: per-score lookups and monitored wallets with webhooks. Overage only ever
-            accrues up to a cap you set yourself (default ${DEFAULT_OVERAGE_CAP_USD}/month); past it,
-            requests pause instead of billing. Every response carries your live usage in its headers.
-          </p>
+          <figure className="lg:col-span-5">
+            <Plate name="calibre-keyless" sizes="(min-width: 1024px) 40vw, 100vw" imgClassName="h-auto w-full" />
+            <figcaption className="t-label mt-3 text-muted">
+              The keyless works: ratchet wheel, crown wheel, and the click that keeps the mainspring from running back.
+            </figcaption>
+          </figure>
         </section>
 
         <section className="frame pb-[10svh]" aria-label="Plans">
-          <div className="grid border-t border-text/80 md:grid-cols-2 xl:grid-cols-4">
+          <div className="grid border-t border-text/15 md:grid-cols-2 xl:grid-cols-4">
             {plans.map((plan, i) => {
               const featured = plan.id === 'starter'
               return (
                 <article
                   key={plan.id}
-                  data-reveal
-                  style={{ ['--d' as string]: `${i * 70}ms` }}
                   className={`relative flex flex-col border-b border-text/20 py-8 xl:border-b-0 ${
                     // One padding rule per column, so no two utilities fight.
                     i === 0
@@ -79,11 +82,7 @@ export default function PricingPage() {
                           : 'md:pl-6'
                   } ${i < plans.length - 1 ? 'xl:border-r xl:border-text/20' : ''}`}
                 >
-                  {featured && <span className="absolute inset-x-0 top-0 h-[3px] bg-accent md:left-6 md:right-6" aria-hidden />}
-                  <div className="flex items-baseline justify-between gap-4">
-                    <h2 className="t-headline text-[2rem] text-text">{plan.name}</h2>
-                    <span className="t-label text-muted">0{i + 1}</span>
-                  </div>
+                  <h2 className="t-headline text-[2rem] text-text">{plan.name}</h2>
                   <p className="t-body mt-3 min-h-[3.25rem] text-[0.95rem] text-muted">{plan.headline}</p>
                   <p className="t-display tnum mt-6 text-[4.25rem] text-text">
                     {plan.priceUsdMonthly === null ? (
@@ -101,7 +100,7 @@ export default function PricingPage() {
                     {ROWS.map((row) => (
                       <div key={row.label} className="flex items-baseline justify-between gap-4 border-t border-text/15 py-2.5">
                         <dt className="t-label text-muted">{row.label}</dt>
-                        <dd className="t-label text-right text-text">{row.value(plan)}</dd>
+                        <dd className="t-label tnum text-right text-text">{row.value(plan)}</dd>
                       </div>
                     ))}
                   </dl>
@@ -111,12 +110,9 @@ export default function PricingPage() {
                         ? 'mailto:api@chainscore.dev?subject=Enterprise%20pricing'
                         : 'mailto:api@chainscore.dev?subject=API%20key%20request%20(' + plan.id + ')'
                     }
-                    className={`btn mt-8 ${featured ? 'btn-signal' : 'btn-line'}`}
+                    className={`btn mt-8 ${featured ? 'btn-ink' : 'btn-line'}`}
                   >
-                    <span>{plan.id === 'enterprise' ? 'Talk to us' : 'Request a key'}</span>
-                    <span className="btn-arrow" aria-hidden>
-                      →
-                    </span>
+                    {plan.id === 'enterprise' ? 'Talk to us' : 'Request a key'}
                   </a>
                 </article>
               )
@@ -139,6 +135,8 @@ export default function PricingPage() {
           year: 'numeric',
           timeZone: 'UTC',
         })}
+        alta={ACCELERATOR}
+        showPlate={false}
       />
     </>
   )

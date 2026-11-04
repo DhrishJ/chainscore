@@ -6,9 +6,7 @@ import { isAddress } from 'viem'
 import { CHAIN_LIST } from '@/lib/chains'
 import { isSolanaAddress } from '@/lib/solanaAuth'
 
-// One ruled instrument field: chain, address, action. Typing nudges the
-// hero instrument's needle (it listens for `cs:typing`), as if the gauge is
-// already reading the address being entered.
+// One ruled field: chain, address, action.
 
 export function WalletInput({
   placeholder = 'Wallet address or ENS name',
@@ -56,7 +54,7 @@ export function WalletInput({
 
   return (
     <form onSubmit={handleSubmit} className="w-full" noValidate>
-      <div className="flex flex-col border border-text/30 bg-background/70 backdrop-blur-[2px] transition-colors focus-within:border-accent sm:flex-row">
+      <div className="flex flex-col border border-text/25 bg-background transition-colors focus-within:border-text sm:flex-row">
         <label htmlFor={`${id}-chain`} className="sr-only">
           Chain
         </label>
@@ -66,7 +64,7 @@ export function WalletInput({
             value={chain}
             onChange={(e) => setChain(e.target.value)}
             disabled={loading}
-            className="t-label h-12 w-full cursor-pointer appearance-none bg-transparent pl-4 pr-9 text-text outline-none sm:w-auto"
+            className="h-12 w-full cursor-pointer appearance-none bg-transparent pl-4 pr-9 text-[0.9375rem] text-text outline-none sm:w-auto"
           >
             {CHAIN_LIST.map((c) => (
               <option key={c.slug} value={c.slug}>
@@ -90,12 +88,11 @@ export function WalletInput({
           onChange={(e) => {
             setValue(e.target.value)
             if (error) setError('')
-            window.dispatchEvent(new CustomEvent('cs:typing'))
           }}
           placeholder={placeholder}
           aria-invalid={Boolean(error)}
           aria-describedby={error ? `${id}-error` : undefined}
-          className="h-12 min-w-0 flex-1 bg-transparent px-4 font-mono text-sm text-text outline-none placeholder:text-muted"
+          className="h-12 min-w-0 flex-none bg-transparent px-4 font-mono text-sm text-text outline-none placeholder:text-muted sm:flex-1"
           disabled={loading}
           spellCheck={false}
           autoComplete="off"
@@ -106,7 +103,7 @@ export function WalletInput({
           disabled={loading}
           className="btn btn-ink h-12 shrink-0 sm:min-w-[11.5rem]"
         >
-          <span>{loading ? 'Measuring' : 'Check score'}</span>
+          <span>{loading ? 'Scoring' : 'Score this wallet'}</span>
           <span className="btn-arrow" aria-hidden>
             →
           </span>

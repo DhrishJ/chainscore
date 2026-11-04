@@ -11,10 +11,9 @@ serves it.
 ## Tech stack
 
 - Next.js 14 (App Router) on Vercel, TypeScript, Tailwind CSS
-- three.js for the procedural 3D on the home page (CS-1, the instrument, and
-  the backtest sculpture; `lib/three/`, lazy-loaded after first paint) and
-  Lenis smooth scroll on editorial pages (`lib/motion/`). Design system:
-  `docs/DESIGN.md`
+- The calibre photographs (`public/calibre/`) are rendered offline in
+  Blender from `scripts/calibre/`; the site itself ships no WebGL and no
+  scroll library. Design system: `docs/DESIGN.md`
 - shadcn/ui components (`components/ui/`)
 - Prisma over Postgres (Supabase-hosted)
 - viem / wagmi / RainbowKit for EVM wallet connect, `@solana/wallet-adapter-*`

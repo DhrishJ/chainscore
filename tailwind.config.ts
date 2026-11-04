@@ -65,27 +65,31 @@ const config: Config = {
         },
       },
       fontFamily: {
-        // Archivo carries display, UI, and body; its width axis does the
-        // work other systems need a second family for (condensed headlines,
-        // expanded engraved labels). `grotesk` is kept as an alias so older
-        // pages keep resolving to the house face.
-        sans: ['var(--font-archivo)', 'ui-sans-serif', 'system-ui', 'sans-serif'],
-        grotesk: ['var(--font-archivo)', 'ui-sans-serif', 'system-ui', 'sans-serif'],
-        serif: ['var(--font-newsreader)', 'Georgia', 'ui-serif', 'serif'],
-        mono: ['var(--font-plex-mono)', 'ui-monospace', 'SFMono-Regular', 'monospace'],
+        // One family carries the whole site (Schibsted Grotesk); code is the
+        // only thing set in mono (Fragment Mono). `grotesk` and `serif` are
+        // kept as aliases so older pages resolve to the house face.
+        sans: ['var(--font-sans)', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        grotesk: ['var(--font-sans)', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        serif: ['var(--font-sans)', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        mono: ['var(--font-mono)', 'ui-monospace', 'SFMono-Regular', 'monospace'],
       },
+      // Square throughout (docs/DESIGN.md); circles stay round via
+      // rounded-full. The larger radii are pinned so older screens
+      // (dashboard, marketplace) follow the system without a rewrite.
       borderRadius: {
         lg: 'var(--radius)',
-        md: 'calc(var(--radius) - 2px)',
-        sm: 'calc(var(--radius) - 4px)',
+        md: 'var(--radius)',
+        sm: 'var(--radius)',
+        xl: '0px',
+        '2xl': '0px',
+        '3xl': '0px',
       },
       transitionTimingFunction: {
-        // The house curve: fast out, long settle. Used for reveals and UI.
-        out: 'cubic-bezier(0.16, 1, 0.3, 1)',
-        'in-out-quart': 'cubic-bezier(0.76, 0, 0.24, 1)',
+        out: 'cubic-bezier(0.22, 1, 0.36, 1)',
+        'in-out-quart': 'cubic-bezier(0.65, 0, 0.35, 1)',
       },
       maxWidth: {
-        frame: '1600px',
+        frame: '1680px',
       },
     },
   },

@@ -21,7 +21,7 @@ const INK = 'rgb(var(--cs-text))'
 const DANGER = 'rgb(var(--cs-danger))'
 const GRID = 'rgb(var(--cs-border))'
 const MUTED = 'rgb(var(--cs-muted))'
-const MONO = 'var(--font-plex-mono), ui-monospace, monospace'
+const MONO = 'var(--font-sans), ui-sans-serif, system-ui, sans-serif'
 
 interface ChainChartRow {
   chain: string

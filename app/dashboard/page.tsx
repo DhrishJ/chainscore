@@ -94,7 +94,7 @@ function DashboardInner() {
     return (
       <main className="min-h-screen flex items-center justify-center px-4">
         <div className="rounded-2xl border border-border bg-card p-8 max-w-md w-full text-center">
-          <p className="text-text font-grotesk font-semibold mb-2">Connect Your Wallet</p>
+          <p className="text-text font-grotesk font-semibold mb-2">Connect your wallet</p>
           <p className="text-muted text-sm">Connect your wallet to view your dashboard.</p>
         </div>
       </main>

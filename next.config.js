@@ -138,6 +138,18 @@ const nextConfig = {
         ],
       },
       {
+        // The calibre renders (public/calibre). Not content-hashed, so a
+        // day of freshness plus a week of stale-while-revalidate rather
+        // than immutable: a re-render reaches readers within a day.
+        source: '/calibre/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=86400, stale-while-revalidate=604800',
+          },
+        ],
+      },
+      {
         // Embeddable widget: frameable by any site. Later rule wins on
         // duplicate keys, so these override the catch-all above.
         source: '/embed/:address*',

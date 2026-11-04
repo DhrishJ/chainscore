@@ -1,37 +1,26 @@
 import type { Metadata, Viewport } from 'next'
-import { Archivo, IBM_Plex_Mono, Newsreader } from 'next/font/google'
+import { Fragment_Mono, Schibsted_Grotesk } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import { Providers } from '@/components/Providers'
 import { Navbar } from '@/components/Navbar'
 import { StructuredData } from '@/components/StructuredData'
-import { MotionRoot } from '@/components/site/MotionRoot'
 import { clientEnv } from '@/lib/env.client'
 import './globals.css'
 
-// House type (docs/DESIGN.md): Archivo carries display, UI, and body, with
-// its width axis doing the condensed-headline and engraved-label work;
-// Newsreader is the editorial voice; IBM Plex Mono annotates and holds data.
-// All three are self-hosted by next/font at build time (CSP font-src 'self').
-const archivo = Archivo({
+// House type (docs/DESIGN.md): Schibsted Grotesk sets everything, from
+// display to table figures (it has true tabular numerals). Fragment Mono
+// is reserved for code and addresses. Both are self-hosted by next/font at
+// build time (CSP font-src 'self').
+const sans = Schibsted_Grotesk({
   subsets: ['latin'],
-  axes: ['wdth'],
-  variable: '--font-archivo',
+  variable: '--font-sans',
   display: 'swap',
 })
 
-const plexMono = IBM_Plex_Mono({
+const mono = Fragment_Mono({
   subsets: ['latin'],
-  weight: ['400', '500'],
-  variable: '--font-plex-mono',
-  display: 'swap',
-})
-
-// Below the fold only, so it does not compete with the hero for bandwidth.
-const newsreader = Newsreader({
-  subsets: ['latin'],
-  axes: ['opsz'],
-  style: ['normal', 'italic'],
-  variable: '--font-newsreader',
+  weight: ['400'],
+  variable: '--font-mono',
   display: 'swap',
   preload: false,
 })
@@ -60,15 +49,8 @@ export const metadata: Metadata = {
 }
 
 export const viewport: Viewport = {
-  themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#F0EEE9' },
-    { media: '(prefers-color-scheme: dark)', color: '#0C0C0B' },
-  ],
+  themeColor: '#0B0B0C',
 }
-
-// Runs before first paint: theme class (no flash) and the motion class that
-// lets lib/motion arm reveals. Reduced-motion readers never get `motion`.
-const bootScript = `(function(){var d=document.documentElement;try{var t=localStorage.getItem('cs-theme');if(t==='dark')d.classList.add('dark');}catch(e){}try{if(!window.matchMedia('(prefers-reduced-motion: reduce)').matches)d.classList.add('motion');}catch(e){}})();`
 
 export default function RootLayout({
   children,
@@ -79,17 +61,15 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${archivo.variable} ${plexMono.variable} ${newsreader.variable}`}
+      className={`dark ${sans.variable} ${mono.variable}`}
     >
       <head>
-        <script dangerouslySetInnerHTML={{ __html: bootScript }} />
         <StructuredData />
       </head>
       {/* The navbar is fixed; pages start below it. The home page pulls
           itself back up underneath (its hero is drawn for that). */}
       <body className="min-h-screen bg-background pt-[var(--nav-h)] font-sans text-text antialiased">
         <Providers>
-          <MotionRoot />
           <Navbar />
           {children}
         </Providers>

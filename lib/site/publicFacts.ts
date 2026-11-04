@@ -81,3 +81,7 @@ export const CHAIN_COVERAGE: ChainCoverage[] = [
   { name: 'Scroll', slug: 'scroll', status: 'degraded', note: 'Borrow detection live; tx-history features reduced. Data completeness is reported on every score.' },
   { name: 'Solana', slug: 'solana', status: 'separate', note: 'Separate scoring path on the site. Not yet available on the partner API.' },
 ]
+
+// Programs. Founder-provided and stated as plain fact: no logo, no quote,
+// nothing that reads as an endorsement of the score (BRAND_VOICE never-do 2).
+export const ACCELERATOR = 'Selected for the ALTA Blockchain Labs accelerator.'

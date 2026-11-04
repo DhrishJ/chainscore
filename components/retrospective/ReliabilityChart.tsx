@@ -16,7 +16,7 @@ const INK = 'rgb(var(--cs-text))'
 const ACCENT = 'rgb(var(--cs-accent))'
 const MUTED = 'rgb(var(--cs-muted))'
 const GRID = 'rgb(var(--cs-border))'
-const MONO = 'var(--font-plex-mono), ui-monospace, monospace'
+const MONO = 'var(--font-sans), ui-sans-serif, system-ui, sans-serif'
 
 interface ReliabilityRow {
   predictedPct: number

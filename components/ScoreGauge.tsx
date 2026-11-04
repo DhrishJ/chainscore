@@ -85,7 +85,7 @@ export function ScoreGauge({ score, className = 'h-60 w-60 sm:h-72 sm:w-72' }: S
             textAnchor="middle"
             dominantBaseline="central"
             fill="rgb(var(--cs-muted))"
-            style={{ font: '500 9.5px var(--font-plex-mono), ui-monospace, monospace' }}
+            style={{ font: '500 9.5px var(--font-sans), ui-sans-serif, system-ui, sans-serif' }}
           >
             {s}
           </text>

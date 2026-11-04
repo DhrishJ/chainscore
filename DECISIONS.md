@@ -3,6 +3,55 @@
 Running log of assumptions and decisions made during the rebuild. Newest first.
 Each entry: date, decision, reasoning, alternatives rejected.
 
+## 2026-11-04: Site redesign, second pass ("The Calibre")
+
+**D-041. The calibre is rendered offline, not in the browser (replaces
+D-036).**
+The live three.js instrument and the backtest sculpture are gone, and with
+them three.js, Lenis and the motion engine. The recurring object is now a
+mechanical watch movement built in Blender from a script
+(`scripts/calibre/`): a Lepine layout after the Unitas 6497 family, with a
+train that meshes at real centre distances (barrel 84 into a 12-leaf centre
+pinion, then 80/10, 75/10, 70/7) and a 15-tooth club escape wheel, which
+gives 18,000 vibrations an hour. Finishes are anisotropic OSL shaders
+(Geneva stripes, perlage, snailing), rendered in Cycles. The site ships
+stills (AVIF with a WebP fallback at fixed widths) and one 48-frame
+explode sequence drawn to a canvas only when the scroll maps to a new
+frame. Result: no WebGL, no animation loop, native scrolling, and images
+far closer to photography than real-time rendering could manage here.
+Rejected: keeping three.js with a better model (still a continuous render
+loop on every visit, and the realism ceiling is the browser's); video for
+the explode (scrubbing video is unreliable on iOS); next/image (it would
+re-encode files already encoded for this exact use).
+
+**D-040. One theme, one typeface, no machine-made tells (replaces the
+D-03x art direction).**
+The first redesign read as generated: cream paper with a serif display
+and an italic aside, mono uppercase eyebrow labels, numbered sections,
+figure captions, rolling counters and word-by-word reveals. Those are now
+the most common signatures of AI-built sites, so the second pass drops
+all of them. The site is studio black (the renders' background, so plates
+bleed off any edge without a frame), set entirely in Schibsted Grotesk
+(it has real tabular figures), with Fragment Mono only for code and
+addresses. Colour comes from the photographs; the interface itself is
+monochrome, with one ruby red kept for liquidations. Text never animates.
+Radii are pinned to zero in `tailwind.config.ts` so older screens follow.
+Rejected: keeping a light theme (two looks for one object); a second
+display face (the photographs already carry the character).
+
+**D-039. The backtest is a table, not an object.**
+The 7,720-block confusion sculpture and the retrospective's waffle chart
+turned a plain result into a spectacle. Both pages now print the matrix as
+four numbers in a table, with the rates beside it in words. Every value is
+still computed by `lib/site/modelFacts.ts` (D-037).
+
+**D-038. The ALTA Blockchain Labs accelerator is stated as plain text.**
+`ACCELERATOR` in `lib/site/publicFacts.ts` is founder-provided. It appears
+in the hero and footer as a sentence, with no logo, quote, or wording that
+could read as an endorsement of the score (BRAND_VOICE never-do 2). The
+marketing agent's anti-fraud allowlist is deliberately not extended: per
+BRAND_VOICE that takes a human commit.
+
 ## 2026-11-03: Site redesign ("The Instrument")
 
 **D-037. Every number the redesign shows is derived, not typed.**

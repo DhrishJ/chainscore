@@ -1,9 +1,10 @@
 import Link from 'next/link'
 import { WalletInput } from '@/components/WalletInput'
-import { LogoMark } from './Logo'
+import { Plate } from './Plate'
+import { Wordmark } from './Logo'
 
-// Closing slab. `dark` scopes graphite tokens here, so the footer is the
-// same ink plate in both themes and every control inside adapts with it.
+// Closing: one more chance to check a wallet, the calibre from above, and
+// the plain facts about the company.
 
 const COLUMNS: Array<{ title: string; links: Array<{ label: string; href: string; external?: boolean }> }> = [
   {
@@ -18,7 +19,7 @@ const COLUMNS: Array<{ title: string; links: Array<{ label: string; href: string
   {
     title: 'Evidence',
     links: [
-      { label: 'Liquidation retrospective', href: '/retrospective' },
+      { label: 'Backtest retrospective', href: '/retrospective' },
       { label: 'Coverage', href: '/#coverage' },
       { label: 'Method', href: '/#method' },
     ],
@@ -33,103 +34,76 @@ const COLUMNS: Array<{ title: string; links: Array<{ label: string; href: string
   },
 ]
 
-export function SiteFooter({ modelVersion, backtestDate }: { modelVersion: string; backtestDate: string }) {
+export function SiteFooter({
+  modelVersion,
+  backtestDate,
+  alta,
+  showPlate = true,
+}: {
+  modelVersion: string
+  backtestDate: string
+  alta: string
+  showPlate?: boolean
+}) {
   return (
-    <footer className="dark relative overflow-hidden bg-background text-text">
-      <div className="frame pt-[14svh]">
-        <div className="relative pt-3">
-          <span data-rule className="absolute inset-x-0 top-0 h-px bg-text/70" aria-hidden />
-          <p className="t-label text-text">(09) Measure</p>
+    <footer className="relative border-t border-text/10 bg-background text-text">
+      <div className="frame grid grid-cols-1 items-center gap-x-[var(--gutter)] gap-y-12 pt-[14svh] lg:grid-cols-12">
+        <div className="lg:col-span-6 xl:col-span-5">
+          <h2 className="t-display text-[clamp(2.4rem,4.6vw,5.2rem)] text-text">Check a wallet before you lend to it.</h2>
+          <p className="t-body mb-6 mt-5 max-w-[42ch] text-muted">
+            Free, from public chain data. If the wallet has never borrowed, you will get that answer instead of a
+            number.
+          </p>
+          <WalletInput />
         </div>
-
-        <div className="mt-10 grid gap-x-[var(--gutter)] gap-y-10 lg:grid-cols-12 lg:items-end">
-          <h2 data-lines className="t-display text-[clamp(3.6rem,9vw,10rem)] text-text lg:col-span-7">
-            <span className="lm">
-              <span>Measure</span>
-            </span>
-            <span className="lm">
-              <span style={{ ['--d' as string]: '80ms' }}>
-                a wallet<span className="text-accent">.</span>
-              </span>
-            </span>
-          </h2>
-          <div data-reveal className="lg:col-span-5 lg:pb-4">
-            <p className="t-body mb-4 max-w-[40ch] text-muted">
-              Free, from public chain data. If the wallet has never borrowed, you will get the honest
-              answer instead of a number.
-            </p>
-            <WalletInput />
-          </div>
-        </div>
-
-        <div className="mt-[12svh] grid grid-cols-2 gap-x-[var(--gutter)] gap-y-10 border-t border-text/15 pt-8 sm:grid-cols-4">
-          <div className="col-span-2 sm:col-span-1">
-            <span className="inline-flex items-center gap-2 text-text">
-              <LogoMark />
-              <span className="t-label">CS-1 · {modelVersion}</span>
-            </span>
-            <p className="t-body mt-4 max-w-[30ch] text-[0.9rem] text-muted">
-              Credit risk infrastructure for onchain lending.
-            </p>
-          </div>
-          {COLUMNS.map((col) => (
-            <nav key={col.title} aria-label={col.title}>
-              <p className="t-label text-muted">{col.title}</p>
-              <ul className="mt-4 space-y-2.5">
-                {col.links.map((l) => (
-                  <li key={l.label}>
-                    {l.external ? (
-                      <a href={l.href} className="link-u text-[0.95rem] text-text">
-                        {l.label}
-                      </a>
-                    ) : (
-                      <Link href={l.href} className="link-u text-[0.95rem] text-text">
-                        {l.label}
-                      </Link>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            </nav>
-          ))}
-        </div>
+        {showPlate && (
+          <figure className="lg:col-span-6 lg:col-start-7 xl:col-span-6 xl:col-start-7">
+            <Plate name="calibre-plan" sizes="(min-width: 1024px) 46vw, 100vw" imgClassName="mx-auto h-auto w-full max-w-[44rem]" />
+            <figcaption className="t-label mt-3 text-center text-muted">
+              The ChainScore calibre from above: 36.6 mm, seventeen jewels, 18,000 beats an hour.
+            </figcaption>
+          </figure>
+        )}
       </div>
 
-      {/* The wordmark, fitted to the frame exactly (textLength). */}
-      <div className="frame mt-[10svh]">
-        <div data-lines aria-hidden="true">
-          <span className="lm">
-            <span>
-              <svg viewBox="0 0 1000 218" className="block w-full" role="presentation">
-                <text
-                  x="0"
-                  y="196"
-                  textLength="1000"
-                  lengthAdjust="spacing"
-                  fill="currentColor"
-                  style={{
-                    fontFamily: 'var(--font-archivo)',
-                    fontSize: '262px',
-                    fontWeight: 640,
-                    fontStretch: '78%',
-                    letterSpacing: '-0.04em',
-                  }}
-                >
-                  ChainScore
-                </text>
-              </svg>
-            </span>
-          </span>
+      <div className="frame mt-[12svh] grid grid-cols-2 gap-x-[var(--gutter)] gap-y-10 border-t border-text/15 pt-10 sm:grid-cols-4">
+        <div className="col-span-2 sm:col-span-1">
+          <Wordmark />
+          <p className="t-body mt-4 max-w-[30ch] text-[0.9375rem] text-muted">Credit risk infrastructure for onchain lending.</p>
+          <p className="t-body mt-3 max-w-[30ch] text-[0.9375rem] text-muted">{alta}</p>
+          <a href="mailto:hello@chainscore.dev" className="link-u mt-3 inline-block text-[0.9375rem] text-text">
+            hello@chainscore.dev
+          </a>
         </div>
+        {COLUMNS.map((col) => (
+          <nav key={col.title} aria-label={col.title}>
+            <p className="t-label text-muted">{col.title}</p>
+            <ul className="mt-4 space-y-2.5">
+              {col.links.map((l) => (
+                <li key={l.label}>
+                  {l.external ? (
+                    <a href={l.href} className="text-[0.95rem] text-text hover:underline hover:underline-offset-4">
+                      {l.label}
+                    </a>
+                  ) : (
+                    <Link href={l.href} className="text-[0.95rem] text-text hover:underline hover:underline-offset-4">
+                      {l.label}
+                    </Link>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </nav>
+        ))}
       </div>
 
-      <div className="frame flex flex-col gap-3 border-t border-text/15 py-6 sm:flex-row sm:items-baseline sm:justify-between">
+      <div className="frame mt-14 flex flex-col gap-3 border-t border-text/15 py-6 sm:flex-row sm:items-baseline sm:justify-between">
         <p className="t-label max-w-[70ch] text-muted">
-          ChainScore (chainscore.dev) scores wallets with onchain borrowing history using public data
-          only. Scores are informational and are not financial advice.
+          ChainScore (chainscore.dev) scores wallets with onchain borrowing history using public data only. Scores are
+          informational and are not financial advice.
         </p>
-        <p className="t-label shrink-0 text-muted">
-          Backtest {backtestDate} · © {new Date().getFullYear()} ChainScore
+        <p className="t-label tnum shrink-0 text-muted">
+          Model {modelVersion}, backtest {backtestDate}. © {new Date().getFullYear()} ChainScore
         </p>
       </div>
     </footer>

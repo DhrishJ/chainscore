@@ -259,8 +259,7 @@ export default async function ScorePage({ params, searchParams }: Props) {
 
   return (
     <main className="frame relative max-w-[1240px] pb-24 pt-10 sm:pt-14">
-      {/* Running header, as on every editorial page. */}
-      <div className="grid grid-cols-12 gap-x-[var(--gutter)] border-t border-text/80 pt-3">
+      <div className="grid grid-cols-12 gap-x-[var(--gutter)] border-t border-text/15 pt-4">
         <p className="t-label col-span-6 text-text sm:col-span-4">
           <Link href="/" className="link-u">
             ← ChainScore
@@ -466,11 +465,11 @@ export default async function ScorePage({ params, searchParams }: Props) {
 
           {/* Factor breakdown */}
           <section aria-labelledby="factors-heading">
-            <div className="flex items-baseline justify-between gap-6 border-t border-text/80 pt-3">
-              <h2 id="factors-heading" className="t-label text-text">
+            <div className="flex items-baseline justify-between gap-6 border-t border-text/15 pt-4">
+              <h2 id="factors-heading" className="t-headline text-[1.6rem] text-text">
                 What drives this score
               </h2>
-              <span className="t-label text-accent">Model contributions</span>
+              <span className="t-label text-muted">Model contributions</span>
             </div>
             <div className="mt-6 flex flex-col gap-3">
               {result.factors.map((factor) => (
@@ -488,9 +487,9 @@ export default async function ScorePage({ params, searchParams }: Props) {
 
           <ImprovementTips factors={result.factors} />
 
-          <section aria-labelledby="another-heading" className="border-t border-text/80 pt-3">
-            <h2 id="another-heading" className="t-label text-text">
-              Measure another wallet
+          <section aria-labelledby="another-heading" className="border-t border-text/15 pt-4">
+            <h2 id="another-heading" className="t-headline text-[1.6rem] text-text">
+              Check another wallet
             </h2>
             <div className="mt-6 max-w-3xl">
               <WalletInput placeholder="Wallet address or ENS name" defaultChain={chainSlug} />

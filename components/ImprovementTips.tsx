@@ -24,23 +24,17 @@ export function ImprovementTips({ factors }: ImprovementTipsProps) {
   if (weakest.length === 0) return null
 
   return (
-    <div className="border border-text/15 bg-card/40 p-5">
-      <h3 className="t-label mb-5 text-text">How to Improve Your Score</h3>
-      <div className="flex flex-col gap-4">
-        {weakest.map((factor, i) => (
-          <div key={factor.name} className="flex gap-3">
-            <div className="t-label flex h-6 w-6 flex-shrink-0 items-center justify-center border border-accent/40 text-accent tabular-nums">
-              {i + 1}
-            </div>
-            <div>
-              <p className="text-text text-sm font-medium">{factor.name}</p>
-              <p className="text-muted text-xs mt-1 leading-relaxed">
-                {tipsByFactor[factor.name] || factor.explanation}
-              </p>
-            </div>
-          </div>
+    <div className="border-t border-text/15 pt-5">
+      <h3 className="t-headline text-[1.6rem] text-text">How to improve this score</h3>
+      <p className="t-label mt-1 text-muted">Weakest factor first.</p>
+      <ul className="mt-5">
+        {weakest.map((factor) => (
+          <li key={factor.name} className="border-t border-text/10 py-4 first:border-t-0 first:pt-0">
+            <p className="text-[0.95rem] font-medium text-text">{factor.name}</p>
+            <p className="mt-1 text-sm leading-relaxed text-muted">{tipsByFactor[factor.name] || factor.explanation}</p>
+          </li>
         ))}
-      </div>
+      </ul>
     </div>
   )
 }
