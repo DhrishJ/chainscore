@@ -12,7 +12,7 @@ serves it.
 
 - Next.js 14 (App Router) on Vercel, TypeScript, Tailwind CSS
 - three.js for the score instrument (`lib/instrument/`), loaded after first
-  paint and rendered only while it moves. Design system: `docs/DESIGN.md`
+  paint and rendered only while on screen. Design system: `docs/DESIGN.md`
 - shadcn/ui components (`components/ui/`)
 - Prisma over Postgres (Supabase-hosted)
 - viem / wagmi / RainbowKit for EVM wallet connect, `@solana/wallet-adapter-*`

@@ -2,7 +2,8 @@ import { Hero } from '@/components/home/Hero'
 import { ExampleReport, type ReportData } from '@/components/home/ExampleReport'
 import { NoHistory } from '@/components/home/NoHistory'
 import { Backtest, type BacktestFigures } from '@/components/home/Backtest'
-import { InstrumentRail, type RailReading } from '@/components/home/InstrumentRail'
+import { InstrumentRail, type RailStop } from '@/components/home/InstrumentRail'
+import type { InstrumentState } from '@/lib/instrument/stage'
 import { Api } from '@/components/home/Api'
 import { Coverage } from '@/components/home/Coverage'
 import { SiteFooter } from '@/components/site/SiteFooter'
@@ -10,12 +11,14 @@ import { ACCELERATOR, CHAIN_COVERAGE, METHODOLOGY } from '@/lib/site/publicFacts
 import {
   BACKTEST,
   CONFUSION,
+  FEATURE_COUNT,
   GRADE_CUTOFFS,
   MODEL_VERSION,
   SCORE_MAX,
   SCORE_MIN,
   formatPct,
   formatPd,
+  pdForScore,
 } from '@/lib/site/modelFacts'
 import { consoleTabs, scoredEnvelope } from '@/lib/site/apiExample'
 
@@ -63,25 +66,63 @@ export default function Home() {
     generated: dateLong,
   }
 
-  const spec = { min: SCORE_MIN, max: SCORE_MAX, grades: GRADE_CUTOFFS, cutoff: BACKTEST.cutoff, modelVersion: MODEL_VERSION }
-  const readings: Record<string, RailReading> = {
-    example: {
-      state: { reading: { kind: 'score', score: example.score }, zone: false, tilt: [-0.26, 0.3] },
+  // The instrument's scale is the model's band and grades; its four factor
+  // wheels are the scorer's factor weights (the same in every report).
+  const spec = {
+    min: SCORE_MIN,
+    max: SCORE_MAX,
+    grades: GRADE_CUTOFFS,
+    cutoff: BACKTEST.cutoff,
+    modelVersion: MODEL_VERSION,
+    featureCount: FEATURE_COUNT,
+    factors: example.factors.map((f) => ({ name: f.name, weight: f.weight })),
+  }
+  const exampleState: InstrumentState = {
+    reading: { kind: 'score', score: example.score, pd: example.calibratedPD, completeness: example.dataCompleteness },
+    zone: false,
+  }
+  // Each stop is an element in the text below ([data-stop]); the view turns
+  // continuously between them as the page scrolls. Yaw past pi shows the
+  // caseback, so the factor breakdown turns the instrument around.
+  const stops: RailStop[] = [
+    {
+      key: 'hero',
+      state: exampleState,
+      pose: { pitch: -0.22, yaw: 0.36 },
       caption: `The example wallet: ${example.score}, grade ${example.grade}, ${formatPd(example.calibratedPD)} probability of default.`,
     },
-    none: {
-      state: { reading: { kind: 'none' }, zone: false, tilt: [-0.2, -0.16] },
+    {
+      key: 'report',
+      state: exampleState,
+      pose: { pitch: -0.15, yaw: -0.3, zoom: 0.98 },
+      caption: `${example.score} on the main scale. The sub-dials read ${formatPd(example.calibratedPD)} probability of default and ${formatPct(example.dataCompleteness)} data completeness.`,
+    },
+    {
+      key: 'factors',
+      state: exampleState,
+      pose: { pitch: -0.12, yaw: -Math.PI + 0.32, zoom: 0.9 },
+      caption: 'Behind the dial, one wheel for each factor group, sized by its weight in the score.',
+    },
+    {
+      key: 'none',
+      state: { reading: { kind: 'none' }, zone: false },
+      pose: { pitch: -0.22, yaw: -2 * Math.PI + 0.3 },
       caption: 'A wallet that never borrowed: no reading. The API returns noBorrowHistory: true.',
     },
-    cutoff: {
-      state: { reading: { kind: 'score', score: BACKTEST.cutoff }, zone: true, tilt: [-0.14, 0.12] },
+    {
+      key: 'cutoff',
+      state: {
+        reading: { kind: 'score', score: BACKTEST.cutoff, pd: pdForScore(BACKTEST.cutoff), completeness: 1 },
+        zone: true,
+      },
+      pose: { pitch: -0.32, yaw: -2 * Math.PI - 0.22, zoom: 0.96 },
       caption: `Below ${BACKTEST.cutoff} a wallet is flagged. ${formatPct(BACKTEST.recall)} of the wallets later liquidated scored there.`,
     },
-  }
+  ]
 
   return (
     <main id="main" className="relative">
-      <InstrumentRail spec={spec} readings={readings}>
+      <InstrumentRail spec={spec} stops={stops}>
         <Hero alta={ACCELERATOR} />
         <ExampleReport r={report} />
         <NoHistory />

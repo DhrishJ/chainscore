@@ -22,24 +22,37 @@ gradients, glows, rounded cards, emoji.
 ## The instrument
 
 The one 3D object is the ChainScore instrument (`lib/instrument/stage.ts`,
-`lib/instrument/dial.ts`): a dial gauge printed at the model's real score band,
-grade cutoffs and operating cutoff. It is used only where it shows something
-the text says:
+`lib/instrument/dial.ts`, `lib/instrument/movement.ts`): a dial gauge printed
+at the model's real score band, grade cutoffs and operating cutoff, with two
+sub-dials (probability of default on a log scale, data completeness), a grade
+wheel in the window at six o'clock, and behind a sapphire caseback the
+mechanism that drives it. Everything on it is a field of the report:
 
-- Home, beside the hero and the example report: the example wallet's score.
-- Home, beside the no-history section: no reading, the needle on its stop and
-  the NO HISTORY flag in the window (what the API returns as
-  `noBorrowHistory: true`).
-- Home, beside the backtest: the needle on the operating cutoff with the
-  flagged zone lit.
-- Result page: the wallet's actual score, or the flag for a non-borrower.
+- Main scale: the score. Sub-dials: `calibratedPD` and `dataCompleteness`.
+  Window: the grade, or the NO HISTORY flag (`noBorrowHistory: true`).
+- Behind the dial: one wheel per factor group, all meshing with the centre
+  wheel, each sized by the group's weight in the score (a wheel's tooth count
+  is its weight in percent: 30, 25, 23, 22, from `lib/data/mlScorer.ts` via
+  the example envelope). The bridge is engraved with the feature count.
 
-`components/home/InstrumentRail.tsx` keeps it in view beside the first four
-home sections on wide screens and switches its reading by the section in the
-middle of the screen; on phones it appears once, in the hero.
-`components/instrument/ScoreInstrument.tsx` loads three.js after first paint,
-shows the flat SVG `ScoreGauge` until then (and without WebGL), and renders
-only while the needle, flag, zone or view is moving.
+It is used only where it shows something the text says. On the home page
+(`components/home/InstrumentRail.tsx`) it stays beside the first four
+sections and each `[data-stop]` element sets a reading, a view and a caption:
+
+| Stop | Reading | View |
+| --- | --- | --- |
+| Hero | example wallet, 742 B | three-quarter front |
+| Report heading | same; caption reads the sub-dials | front, turned the other way |
+| Factor breakdown | same; wheels labelled with names and weights | the caseback |
+| No history | no reading, flag in | front again (a full turn) |
+| Backtest | 578 with the flagged zone lit | front, tilted |
+
+Between stops the view turns continuously with the scroll and the gear train
+turns with it; the reading changes as each stop reaches the middle of the
+screen. On phones it appears once, in the hero, and turns as it passes. On a
+result page it reads the wallet's own score, PD and completeness.
+`components/instrument/ScoreInstrument.tsx` loads three.js after first paint
+and shows the flat SVG `ScoreGauge` until then (and without WebGL).
 
 ## Color tokens
 
@@ -87,11 +100,24 @@ One theme. Every colour is a CSS variable (space-separated RGB channels) in
 
 ## Motion
 
-Only the instrument moves: the needle settles on a damped spring, the flag
-slides, the zone fades, the view eases between sections. Nothing animates while
-it is still, there is no scroll-linked rendering, no smooth-scroll library, and
-text never animates. Under `prefers-reduced-motion` the instrument jumps
-straight to each state.
+Only the instrument moves, and it is always a physical motion of the object:
+
+- Arrival: the case turns in and the needle runs its full-scale self-test
+  (rest, 850, then the reading), the grade wheel rolling with it.
+- Readings: the needle and sub-hands settle on damped springs, the flag drops
+  in with a small bounce, the flagged zone fades in and pulses slowly.
+- Life: the case floats and leans a little toward a mouse pointer,
+  reflections drift across the crystal, a live needle trembles by a fraction
+  of a point; behind the dial the balance swings at 3 Hz with a breathing
+  hairspring, the escape wheel steps half a tooth per beat and the train turns.
+- Scroll: the view follows the reader between stops on critically damped
+  springs; the train and ratchet turn with the scroll.
+
+It renders continuously only while on screen and the tab is visible. If
+frames run slow it lowers its pixel ratio, then halves its frame rate. Text
+never animates, and there is no smooth-scroll library. Under
+`prefers-reduced-motion` there is no arrival, float, ticking or parallax; it
+jumps to each stop's view and reading and draws only when they change.
 
 ## Risk-tier color semantics
 

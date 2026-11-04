@@ -7,7 +7,7 @@ import { WalletInput } from '@/components/WalletInput'
 
 export function Hero({ alta }: { alta: string }) {
   return (
-    <section id="top" data-reading="example" aria-labelledby="hero-heading" className="flex min-h-[calc(100svh-var(--nav-h))] flex-col justify-center pb-12 pt-10 lg:pb-20">
+    <section id="top" data-stop="hero" aria-labelledby="hero-heading" className="flex min-h-[calc(100svh-var(--nav-h))] flex-col justify-center pb-12 pt-10 lg:pb-20">
       <h1 id="hero-heading" className="t-display max-w-[16ch] text-[clamp(2.4rem,4.6vw,4.4rem)] text-text">
         Credit scores for onchain borrowers
       </h1>

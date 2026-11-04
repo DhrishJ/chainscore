@@ -27,14 +27,17 @@ const short = (a: string) => `${a.slice(0, 6)}…${a.slice(-4)}`
 
 export function ExampleReport({ r }: { r: ReportData }) {
   return (
-    <section id="report" data-reading="example" aria-labelledby="report-heading" className="scroll-mt-20 py-16 lg:py-24">
-      <h2 id="report-heading" className="t-headline text-[clamp(1.6rem,2.4vw,2.2rem)] text-text">
-        What a lender gets back
-      </h2>
-      <p className="t-body mt-3 max-w-[56ch] text-muted">
-        Every score arrives with the numbers behind it. This is the report for an example wallet; the API returns the
-        same fields as JSON.
-      </p>
+    <section id="report" aria-labelledby="report-heading" className="scroll-mt-20 py-16 lg:py-24">
+      {/* the instrument faces front here: its sub-dials read this report */}
+      <div data-stop="report">
+        <h2 id="report-heading" className="t-headline text-[clamp(1.6rem,2.4vw,2.2rem)] text-text">
+          What a lender gets back
+        </h2>
+        <p className="t-body mt-3 max-w-[56ch] text-muted">
+          Every score arrives with the numbers behind it. This is the report for an example wallet; the API returns
+          the same fields as JSON.
+        </p>
+      </div>
 
       <article className="mt-8 border border-text/15 bg-card" aria-label="Example score report">
         <header className="flex flex-wrap items-baseline justify-between gap-2 border-b border-text/10 px-5 py-3">
@@ -72,7 +75,8 @@ export function ExampleReport({ r }: { r: ReportData }) {
           </dl>
         </div>
 
-        <div className="border-t border-text/10 px-5 py-5">
+        {/* the instrument turns around here, to its factor wheels */}
+        <div data-stop="factors" className="border-t border-text/10 px-5 py-5">
           <p className="t-label text-muted">Factor breakdown</p>
           <ul className="mt-3">
             {r.factors.map((f) => (

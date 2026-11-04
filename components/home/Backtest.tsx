@@ -33,7 +33,7 @@ export function Backtest({ f }: { f: BacktestFigures }) {
     { value: f.rocAuc, text: 'ROC-AUC: how well the score ranks risky wallets above safe ones' },
   ]
   return (
-    <section id="backtest" data-reading="cutoff" aria-labelledby="backtest-heading" className="scroll-mt-20 py-16 lg:py-24">
+    <section id="backtest" data-stop="cutoff" aria-labelledby="backtest-heading" className="scroll-mt-20 py-16 lg:py-24">
       <h2 id="backtest-heading" className="t-headline text-[clamp(1.6rem,2.4vw,2.2rem)] text-text">
         How often it catches liquidations
       </h2>

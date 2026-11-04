@@ -144,19 +144,117 @@ export function drawDial(spec: ScaleSpec, font: string, palette: Palette = PALET
   ctx.fillText(`Credit score  ${spec.min} to ${spec.max}`, R, R - R * 0.235)
   ctx.fillText(`Model ${spec.modelVersion}`, R, R + R * 0.62)
 
-  // the flag window frame at six o'clock (the aperture itself is cut in
-  // the dial mesh; this is its printed surround)
-  const w = R * 0.36
-  const h = R * 0.115
-  ctx.strokeStyle = palette.muted
-  ctx.lineWidth = 3
-  ctx.strokeRect(R - w / 2 - 6, R + R * 0.36 - h / 2 - 6, w + 12, h + 12)
+  // the window at six o'clock (the aperture itself is cut in the dial
+  // mesh; this is its printed surround)
+  {
+    const k = R / 0.972
+    const w = FLAG_WINDOW.w * k
+    const h = FLAG_WINDOW.h * k
+    ctx.strokeStyle = palette.muted
+    ctx.lineWidth = 3
+    ctx.strokeRect(R - w / 2 - 7, R - FLAG_WINDOW.y * k - h / 2 - 7, w + 14, h + 14)
+  }
+
+  // the two sub-dials: probability of default (log) and data completeness
+  for (const sd of SUBDIALS) {
+    const k = R / 0.972
+    const cx = R + sd.x * k
+    const cy = R - sd.y * k
+    const r = sd.r * k
+    ctx.strokeStyle = palette.muted
+    ctx.lineWidth = 2.5
+    ctx.beginPath()
+    ctx.arc(cx, cy, r, 0, Math.PI * 2)
+    ctx.stroke()
+    // fine concentric rings over the grained disc
+    ctx.globalAlpha = 0.1
+    for (let rr = r * 0.25; rr < r * 0.92; rr += r * 0.055) {
+      ctx.beginPath()
+      ctx.arc(cx, cy, rr, 0, Math.PI * 2)
+      ctx.stroke()
+    }
+    ctx.globalAlpha = 1
+    for (const t of sd.ticks) {
+      const a = SUB_START - sd.toT(t.v) * SUB_SWEEP
+      const r0 = t.label ? r * 0.74 : r * 0.82
+      ctx.strokeStyle = palette.print
+      ctx.lineWidth = t.label ? 4 : 2
+      ctx.beginPath()
+      ctx.moveTo(cx + Math.cos(a) * r0, cy - Math.sin(a) * r0)
+      ctx.lineTo(cx + Math.cos(a) * r * 0.94, cy - Math.sin(a) * r * 0.94)
+      ctx.stroke()
+      if (t.label) {
+        ctx.fillStyle = palette.print
+        ctx.font = `500 ${Math.round(R * 0.052)}px ${font}`
+        ctx.fillText(t.label, cx + Math.cos(a) * r * 0.52, cy - Math.sin(a) * r * 0.52)
+      }
+    }
+    ctx.fillStyle = palette.muted
+    ctx.font = `500 ${Math.round(R * 0.04)}px ${font}`
+    ctx.fillText(sd.title, cx, cy + r * 0.66)
+  }
 
   return c
 }
 
-/** Radial brushing directions for the sunray dial (anisotropyMap). */
-export function drawSunray(size = 512): HTMLCanvasElement {
+// Sub-dials: 270 degree sweeps like the main scale. Units are dial units
+// (dial radius 0.972); the stage places the hands at the same centres.
+export const SUB_SWEEP = (Math.PI * 3) / 2
+export const SUB_START = (Math.PI * 5) / 4
+
+const log = Math.log10
+export interface SubDial {
+  key: 'pd' | 'completeness'
+  x: number
+  y: number
+  r: number
+  title: string
+  toT: (v: number) => number
+  ticks: Array<{ v: number; label?: string }>
+}
+
+export const SUBDIALS: SubDial[] = [
+  {
+    key: 'pd',
+    x: -0.37,
+    y: -0.05,
+    r: 0.185,
+    title: 'Default %',
+    // log scale, 0.1% to 50%
+    toT: (v) => Math.min(1, Math.max(0, (log(Math.max(v, 0.001) * 100) - log(0.1)) / (log(50) - log(0.1)))),
+    ticks: [
+      { v: 0.001, label: '0.1' },
+      { v: 0.002 },
+      { v: 0.005 },
+      { v: 0.01, label: '1' },
+      { v: 0.02 },
+      { v: 0.05 },
+      { v: 0.1, label: '10' },
+      { v: 0.2 },
+      { v: 0.5, label: '50' },
+    ],
+  },
+  {
+    key: 'completeness',
+    x: 0.37,
+    y: -0.05,
+    r: 0.185,
+    title: 'Data %',
+    toT: (v) => Math.min(1, Math.max(0, v)),
+    ticks: [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1].map((v) => ({
+      v,
+      label: v === 0 ? '0' : v === 0.5 ? '50' : v === 1 ? '100' : undefined,
+    })),
+  },
+]
+
+/**
+ * Radial brushing directions for the sunray dial (anisotropyMap). With
+ * `ringFrom` (a fraction of the radius), the outer ring is grained
+ * concentrically instead, so the scale track catches the light apart from
+ * the centre.
+ */
+export function drawSunray(size = 512, ringFrom?: number): HTMLCanvasElement {
   const c = document.createElement('canvas')
   c.width = c.height = size
   const ctx = c.getContext('2d')!
@@ -166,15 +264,66 @@ export function drawSunray(size = 512): HTMLCanvasElement {
       const dx = (x + 0.5) / size - 0.5
       const dy = 0.5 - (y + 0.5) / size
       const len = Math.hypot(dx, dy) || 1
-      // tangent-space direction of the brushing: radial
+      // tangent-space direction of the brushing: radial, or concentric on
+      // the outer ring
+      const ring = ringFrom !== undefined && len * 2 > ringFrom
+      const ux = ring ? -dy / len : dx / len
+      const uy = ring ? dx / len : dy / len
       const i = (y * size + x) * 4
-      img.data[i] = Math.round((dx / len) * 127.5 + 127.5)
-      img.data[i + 1] = Math.round((dy / len) * 127.5 + 127.5)
+      img.data[i] = Math.round(ux * 127.5 + 127.5)
+      img.data[i + 1] = Math.round(uy * 127.5 + 127.5)
       img.data[i + 2] = 255 // full strength
       img.data[i + 3] = 255
     }
   }
   ctx.putImageData(img, 0, 0)
+  return c
+}
+
+/** The window at six o'clock, in dial units: grade wheel and NO HISTORY flag. */
+export const FLAG_WINDOW = { w: 0.41, h: 0.128, y: -0.35 }
+
+export const GRADE_ORDER = ['A', 'B', 'C', 'D', 'F'] as const
+
+export function gradeIndex(score: number, spec: ScaleSpec): number {
+  if (score >= spec.grades.A) return 0
+  if (score >= spec.grades.B) return 1
+  if (score >= spec.grades.C) return 2
+  if (score >= spec.grades.D) return 3
+  return 4
+}
+
+/**
+ * The grade wheel seen through the window: one cell per grade, side by
+ * side, in the colours of the dial's grade bands. The stage slides it.
+ */
+export function drawGrades(font: string, palette: Palette = PALETTE): HTMLCanvasElement {
+  const cellW = 512
+  const h = 160
+  const c = document.createElement('canvas')
+  c.width = cellW * GRADE_ORDER.length
+  c.height = h
+  const ctx = c.getContext('2d')!
+  ctx.fillStyle = '#0d0e10'
+  ctx.fillRect(0, 0, c.width, h)
+  const color: Record<string, string> = { A: palette.print, B: palette.green, C: palette.amber, D: palette.amber, F: palette.ruby }
+  GRADE_ORDER.forEach((g, i) => {
+    const x0 = i * cellW
+    ctx.textBaseline = 'middle'
+    ctx.fillStyle = palette.muted
+    ctx.font = `500 ${Math.round(h * 0.25)}px ${font}`
+    ctx.textAlign = 'right'
+    ;(ctx as CanvasRenderingContext2D & { letterSpacing?: string }).letterSpacing = '6px'
+    ctx.fillText('GRADE', x0 + cellW * 0.58, h / 2 + 3)
+    ;(ctx as CanvasRenderingContext2D & { letterSpacing?: string }).letterSpacing = '0px'
+    ctx.fillStyle = color[g]
+    ctx.font = `600 ${Math.round(h * 0.66)}px ${font}`
+    ctx.textAlign = 'left'
+    ctx.fillText(g, x0 + cellW * 0.63, h / 2 + 5)
+    // the gap between two cells on the wheel
+    ctx.fillStyle = '#050506'
+    ctx.fillRect(x0, 0, 6, h)
+  })
   return c
 }
 

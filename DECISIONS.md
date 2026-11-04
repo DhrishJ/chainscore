@@ -3,6 +3,30 @@
 Running log of assumptions and decisions made during the rebuild. Newest first.
 Each entry: date, decision, reasoning, alternatives rejected.
 
+## 2026-11-04: Fourth pass (the instrument comes alive)
+
+**D-045. The instrument is a working mechanism, and it moves with the
+reader (amends D-043).**
+Rendering only on change made the instrument read as a still image. It now
+runs whenever it is on screen, and every added part is a field of the
+report rather than decoration: sub-dials for the calibrated PD (log scale)
+and data completeness, a grade wheel in the window, and behind a sapphire
+caseback one wheel per factor group, meshing with the centre wheel and
+sized by the group's weight (tooth count = weight in percent), labelled
+with the group's name and weight when the caseback faces the reader. On
+the home page each `[data-stop]` element sets a reading and a view; the
+view turns continuously with the scroll, through a full turn that shows
+the factor wheels beside the factor breakdown. Life comes from physical
+motion only: the needle's self-test on arrival, springs, a slight float
+and pointer lean, drifting reflections, the balance and escapement
+running. Cost is held down by design: about 50 draw calls (static parts
+merged per material, perlage and Cotes de Geneve drawn into textures, not
+geometry), no shadows or post-processing, rendering paused off screen and
+in background tabs, and an adaptive pixel ratio then frame rate.
+Rejected: an exploded view (it stuttered before, D-043) and captions that
+assign meaning to parts that have none (the balance and escapement are
+there because a movement needs them, and no caption claims otherwise).
+
 ## 2026-11-04: Third pass (product first, the instrument, honest outages)
 
 **D-044. The page shows the product, set plainly.**

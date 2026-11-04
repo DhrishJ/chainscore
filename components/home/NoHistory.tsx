@@ -4,7 +4,7 @@
 
 export function NoHistory() {
   return (
-    <section data-reading="none" aria-labelledby="nohistory-heading" className="py-16 lg:py-24">
+    <section data-stop="none" aria-labelledby="nohistory-heading" className="py-16 lg:py-24">
       <h2 id="nohistory-heading" className="t-headline text-[clamp(1.6rem,2.4vw,2.2rem)] text-text">
         Wallets that never borrowed get no score
       </h2>

@@ -4,7 +4,7 @@ import { isAddress } from 'viem'
 import { createPublicClient, http } from 'viem'
 import { mainnet } from 'viem/chains'
 import { ScoreInstrument } from '@/components/instrument/ScoreInstrument'
-import { BACKTEST, GRADE_CUTOFFS, MODEL_VERSION, SCORE_MAX, SCORE_MIN } from '@/lib/site/modelFacts'
+import { BACKTEST, FEATURE_COUNT, GRADE_CUTOFFS, MODEL_VERSION, SCORE_MAX, SCORE_MIN } from '@/lib/site/modelFacts'
 import { FactorCard } from '@/components/FactorCard'
 import { RadarFactors } from '@/components/explain/RadarFactors'
 import { ContributionWaterfall } from '@/components/explain/ContributionWaterfall'
@@ -278,7 +278,14 @@ function scoreTextColor(score: number): string {
 }
 
 // The instrument's scale: the model's real band, cutoffs and version.
-const SPEC = { min: SCORE_MIN, max: SCORE_MAX, grades: GRADE_CUTOFFS, cutoff: BACKTEST.cutoff, modelVersion: MODEL_VERSION }
+const SPEC = {
+  min: SCORE_MIN,
+  max: SCORE_MAX,
+  grades: GRADE_CUTOFFS,
+  cutoff: BACKTEST.cutoff,
+  modelVersion: MODEL_VERSION,
+  featureCount: FEATURE_COUNT,
+}
 
 export default async function ScorePage({ params, searchParams }: Props) {
   const { address } = params
@@ -454,7 +461,16 @@ export default async function ScorePage({ params, searchParams }: Props) {
             <div className="flex justify-center lg:col-span-5 lg:justify-start">
               <ScoreInstrument
                 spec={SPEC}
-                state={{ reading: { kind: 'score', score: result.score }, zone: false, tilt: [-0.22, 0.26] }}
+                state={{
+                  reading: {
+                    kind: 'score',
+                    score: result.score,
+                    pd: typeof result.calibratedPD === 'number' ? result.calibratedPD : undefined,
+                    completeness: typeof result.dataCompleteness === 'number' ? result.dataCompleteness : undefined,
+                  },
+                  zone: false,
+                  tilt: [-0.22, 0.26],
+                }}
                 label={`ChainScore instrument reading ${result.score}, grade ${result.grade}`}
                 className="w-full max-w-[26rem]"
               />
