@@ -148,21 +148,25 @@ export function CalibreSequence({ frames, poster, alt, children }: Props) {
 
   return (
     <section ref={sectionRef} aria-label={alt} className="relative grid grid-cols-1 lg:grid-cols-12 lg:gap-x-[var(--gutter)]">
-      <div className="sticky top-[var(--nav-h)] z-10 h-[50svh] bg-background lg:col-span-7 lg:col-start-6 lg:row-start-1 lg:h-[calc(100svh-var(--nav-h))]">
-        {/* Server-rendered still: shown without JS, under reduced motion,
-            and until the first canvas frame is ready. */}
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={src('m', poster)}
-          srcSet={`${src('m', poster)} 640w, ${src('d', poster)} 1200w`}
-          sizes="(min-width: 1024px) 58vw, 100vw"
-          alt=""
-          aria-hidden
-          loading="lazy"
-          decoding="async"
-          className={`absolute inset-0 h-full w-full object-contain transition-opacity duration-500 ${drawn ? 'opacity-0' : 'opacity-100'}`}
-        />
-        <canvas ref={canvasRef} className="absolute inset-0 h-full w-full" aria-hidden />
+      {/* Pinned from the very top, padded below the nav, so text scrolling
+          underneath never shows through when the nav slides away. */}
+      <div className="sticky top-0 z-10 h-[calc(50svh+var(--nav-h))] bg-background pt-[var(--nav-h)] lg:col-span-7 lg:col-start-6 lg:row-start-1 lg:h-[100svh]">
+        <div className="relative h-full">
+          {/* Server-rendered still: shown without JS, under reduced motion,
+              and until the first canvas frame is ready. */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={src('m', poster)}
+            srcSet={`${src('m', poster)} 640w, ${src('d', poster)} 1200w`}
+            sizes="(min-width: 1024px) 58vw, 100vw"
+            alt=""
+            aria-hidden
+            loading="lazy"
+            decoding="async"
+            className={`absolute inset-0 h-full w-full object-contain transition-opacity duration-500 ${drawn ? 'opacity-0' : 'opacity-100'}`}
+          />
+          <canvas ref={canvasRef} className="absolute inset-0 h-full w-full" aria-hidden />
+        </div>
       </div>
       <div className="relative lg:col-span-5 lg:row-start-1">{children}</div>
     </section>
