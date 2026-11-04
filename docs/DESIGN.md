@@ -2,65 +2,80 @@
 
 This document describes the design tokens and conventions that actually exist
 in this codebase today (`tailwind.config.ts`, `app/globals.css`,
-`lib/site/scoreTier.ts`, `lib/site/plates.ts`, `scripts/calibre/`). It is a
-reference, not an aspiration; update it when the tokens change.
+`lib/site/scoreTier.ts`, `lib/instrument/`). It is a reference, not an
+aspiration; update it when the tokens change.
 
-## Concept: the calibre
+## Concept: the product, plainly
 
-The site's one recurring image is a mechanical watch movement, the ChainScore
-calibre, photographed in a studio: the hero, the escapement next to the
-borrower principle, the movement taken apart beside the factor groups, the
-keyless works on pricing, the plan view in the footer. It is built, not
-illustrated: `scripts/calibre/geom2d.py` lays out a Lepine calibre after the
-Unitas 6497 family (36.6 mm, crown at 9 o'clock from the caseback, small
-seconds at 3), with a going train that meshes at true centre distances and a
-Swiss lever escapement, and `scripts/calibre/build.py` turns it into a Blender
-scene with real finishes.
+The site shows the product rather than describing it: the score check, a full
+example report laid out like the real result page, the no-history answer, the
+published backtest, the API request and response. Copy is specific and dry
+(`BRAND_VOICE.md`). Headings are plain titles at moderate sizes, not
+declarative sentences; numbers come from the Facts Registry or are computed
+from the model and the backtest.
 
-The rest of the page stays out of its way: studio black, one typeface, plain
-sentences, hairline rules, and real data. The copy is specific and dry
-(`BRAND_VOICE.md`). No eyebrow labels, numbered sections, figure numbers,
-rolling counters, word-by-word reveals, glass, gradients, glows, rounded cards
-or emoji. Those are the signatures of generated sites (D-040).
+Avoid the signatures of generated sites (D-040, D-044): eyebrow labels,
+numbered sections, figure numbers, rolling counters, word-by-word reveals,
+giant tightly tracked headline sentences over muted paragraphs, glass,
+gradients, glows, rounded cards, emoji.
+
+## The instrument
+
+The one 3D object is the ChainScore instrument (`lib/instrument/stage.ts`,
+`lib/instrument/dial.ts`): a dial gauge printed at the model's real score band,
+grade cutoffs and operating cutoff. It is used only where it shows something
+the text says:
+
+- Home, beside the hero and the example report: the example wallet's score.
+- Home, beside the no-history section: no reading, the needle on its stop and
+  the NO HISTORY flag in the window (what the API returns as
+  `noBorrowHistory: true`).
+- Home, beside the backtest: the needle on the operating cutoff with the
+  flagged zone lit.
+- Result page: the wallet's actual score, or the flag for a non-borrower.
+
+`components/home/InstrumentRail.tsx` keeps it in view beside the first four
+home sections on wide screens and switches its reading by the section in the
+middle of the screen; on phones it appears once, in the hero.
+`components/instrument/ScoreInstrument.tsx` loads three.js after first paint,
+shows the flat SVG `ScoreGauge` until then (and without WebGL), and renders
+only while the needle, flag, zone or view is moving.
 
 ## Color tokens
 
 One theme. Every colour is a CSS variable (space-separated RGB channels) in
 `app/globals.css`, consumed by Tailwind as `rgb(var(--cs-x) / <alpha-value>)`.
-`:root` and `.dark` carry the same values, and `<html>` always has `dark`, so
-`dark:` utilities in older components resolve consistently.
+`:root` and `.dark` carry the same values, and `<html>` always has `dark`.
 
 | Token | Value | Contrast on `background` | Role |
 | --- | --- | --- | --- |
-| `background` | `#0B0B0C` | | Page; also the renders' background |
-| `card` | `#131314` | | One step up |
+| `background` | `#0B0B0C` | | Page |
+| `card` | `#131314` | | Report panels |
 | `border` | `#2E2E2F` | | Opaque hairline (prefer `border-text/15` for rules) |
 | `text` | `#ECEAE5` | 16.4:1 | Text |
 | `muted` | `#9A9790` | 6.7:1 | Secondary text |
-| `accent` | `#ECEAE5` | 16.4:1 | Monochrome: the photographs carry colour |
-| `danger` | `#E95C68` | 5.8:1 | Ruby: liquidations, the weakest slice |
+| `accent` | `#ECEAE5` | 16.4:1 | Monochrome interface |
+| `danger` | `#E95C68` | 5.8:1 | Liquidations, the flagged zone, the weakest slice |
 | `success` | `#7EC89C` | 10.0:1 | Score tiers |
 | `warning` | `#E2B460` | 10.2:1 | Score tiers |
 | `ink*` | `#111112` and the above | | Code panels |
 
 ## Type
 
-- **Schibsted Grotesk** (`--font-sans`) sets everything: display, UI, body,
-  table figures. It has real tabular numerals (`tnum`); use them in columns of
-  plain digits, not on large figures with thousands separators, where the
-  tabular comma opens a gap.
-- **Fragment Mono** (`--font-mono`) is for code and wallet addresses only.
-- Classes in `app/globals.css`: `.t-display` (500, -0.042em, 0.93),
-  `.t-headline` (500, -0.03em), `.t-body` (17px / 1.58), `.t-label` (13px small
-  print, sentence case), `.t-code`. `.t-serif` and `.t-engraved` remain as
-  aliases for older pages and render in the house face.
+- **IBM Plex Sans** (`--font-sans`) for everything people read. Numbers in
+  data use `.t-figure` (tabular figures) so columns line up.
+- **IBM Plex Mono** (`--font-mono`) for code, wallet addresses and API fields
+  only.
+- Classes in `app/globals.css`: `.t-display` (500, -0.02em), `.t-headline`
+  (500, -0.012em), `.t-body` (16px / 1.62), `.t-label` (13px small print,
+  sentence case), `.t-code`, `.t-figure`.
 
 ## Layout
 
 - `.frame`: max width 1680px, fluid gutter `--gutter` (20 to 44px).
-- 12-column grids, text in 4 to 6 columns, photographs allowed to bleed off
-  the frame and the viewport.
-- Sections are separated by space and a `border-text/10` or `/15` hairline.
+- 12-column grids. On the home page the first four sections use 7 columns,
+  with the instrument in the remaining 5.
+- Sections are separated by space and `border-text/10` or `/15` hairlines.
 
 ## Controls
 
@@ -70,30 +85,13 @@ One theme. Every colour is a CSS variable (space-separated RGB channels) in
 - `.field`: a ruled input; the wallet field is mono.
 - Links are underlined at rest (`.link-u`), brighter on hover.
 
-## Photographs (the plates)
-
-- Rendered in Cycles from `scripts/calibre/render.py` (shots `hero`, `top`,
-  `macro`, `explode`), composited on `#0B0B0C` and encoded by
-  `scripts/calibre/export.py` as AVIF plus WebP at fixed widths, with a 24px
-  blurred placeholder. `lib/site/plates.ts` is generated from that output and
-  lists every plate's sizes and alt text.
-- `components/site/Plate.tsx` renders a plate as `<picture>`; only the hero is
-  `priority`.
-- The explode sequence (`public/calibre/explode/{d,m}/NNN.webp`, 1200px and
-  640px) is drawn by `components/home/CalibreSequence.tsx`.
-
 ## Motion
 
-Three things move, all transform-only or canvas, all off under
-`prefers-reduced-motion`:
-
-1. The hero plate settles once on load (`.cs-settle`, scale 1.045 to 1).
-2. Plates drift against the scroll (`components/site/Drift.tsx`): one
-   transform per frame while on screen.
-3. The explode sequence follows the scroll. Frames load coarse to fine when
-   the section is near; the canvas redraws only when the frame changes.
-
-Text never animates. There is no smooth-scroll library and no render loop.
+Only the instrument moves: the needle settles on a damped spring, the flag
+slides, the zone fades, the view eases between sections. Nothing animates while
+it is still, there is no scroll-linked rendering, no smooth-scroll library, and
+text never animates. Under `prefers-reduced-motion` the instrument jumps
+straight to each state.
 
 ## Risk-tier color semantics
 
@@ -107,16 +105,16 @@ Text never animates. There is no smooth-scroll library and no render loop.
 | `C`, `D` | fair | `warning` |
 | `F` | poor | `danger` |
 
-The result-page `ScoreGauge` prints its grade bands from the same cutoffs with
-the same tier colours.
+The instrument's dial and the flat `ScoreGauge` print their grade bands from
+the same cutoffs with the same tier colours.
 
 ## Usage rules
 
 - Use tokens (`bg-card`, `text-muted`, `border-text/15`), never raw hex in
-  components. (Exceptions: the canvas fill in `CalibreSequence`, which must
-  match the renders' background exactly.)
-- If something needs to stand out, use weight, size, or a photograph, not a
-  new hue. Ruby is reserved for liquidation and risk.
+  components. (Exception: `lib/instrument/`, whose materials and printed dial
+  are a physical object, not UI.)
+- If something needs to stand out, use weight or size, not a new hue. Ruby is
+  reserved for liquidation and risk.
 - Reuse `stylesForGrade` / `tierForScore` from `lib/site/scoreTier.ts` for any
   grade UI rather than re-deriving the mapping.
 - Numbers on public pages come from `lib/site/publicFacts.ts` (Facts

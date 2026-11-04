@@ -4,7 +4,7 @@ import { addressParamSchema, chainSlugSchema } from '@/lib/validation'
 import { scoreEvmWallet } from '@/lib/scoring/live'
 import { prisma } from '@/lib/db'
 import { planFor, DEFAULT_OVERAGE_CAP_USD } from '@/lib/pricing/plans'
-import { meterScore } from '@/lib/pricing/metering'
+import { meterScore, refundScore } from '@/lib/pricing/metering'
 
 export const dynamic = 'force-dynamic'
 
@@ -71,6 +71,10 @@ export async function GET(req: NextRequest, { params }: { params: { address: str
   }
 
   const { envelope, error } = await scoreEvmWallet(address, chainSlug)
+  if (error && error.status >= 500 && meter.used > 0) {
+    // Nothing was scored (upstream outage): this call does not count.
+    await refundScore(auth.key.keyHash.slice(0, 16))
+  }
   if (error || !envelope) {
     return NextResponse.json(
       { error: error?.message ?? 'Scoring failed' },

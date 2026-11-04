@@ -13,13 +13,16 @@ export function Coverage({ chains, methodology }: { chains: ChainCoverage[]; met
   const evm = chains.filter((c) => c.status !== 'separate').length
   const protocols = methodology.find((m) => m.registryKey === 'protocols_covered')
   return (
-    <section id="coverage" aria-labelledby="coverage-heading" className="frame scroll-mt-16 border-t border-text/10 py-[16svh]">
+    <section id="coverage" aria-labelledby="coverage-heading" className="frame scroll-mt-16 border-t border-text/10 py-20 lg:py-28">
       <div className="grid grid-cols-1 gap-x-[var(--gutter)] gap-y-12 lg:grid-cols-12">
         <div className="lg:col-span-5">
-          <h2 id="coverage-heading" className="t-display text-[clamp(2.4rem,4.4vw,5rem)] text-text">
-            {evm === 7 ? 'Seven' : evm} EVM networks, plus Solana.
+          <h2 id="coverage-heading" className="t-headline text-[clamp(1.6rem,2.4vw,2.2rem)] text-text">
+            Coverage
           </h2>
-          <p className="t-body mt-6 max-w-[40ch] text-muted">
+          <p className="t-body mt-3 max-w-[40ch] text-muted">
+            {evm === 7 ? 'Seven' : evm} EVM networks, plus Solana on the website.
+          </p>
+          <p className="t-body mt-3 max-w-[40ch] text-muted">
             Where our data is thinner, the score says so: every response carries a data-completeness figure and
             names the sources it could not read.
           </p>
@@ -48,13 +51,13 @@ export function Coverage({ chains, methodology }: { chains: ChainCoverage[]; met
             <tbody>
               {chains.map((c) => (
                 <tr key={c.slug} className="border-b border-text/15 align-baseline">
-                  <th scope="row" className="t-headline w-[38%] py-4 pr-4 text-[1.5rem] font-medium text-text sm:w-[30%] md:w-[24%]">
+                  <th scope="row" className="w-[38%] py-3.5 pr-4 text-left text-[1.0625rem] font-medium text-text sm:w-[30%] md:w-[24%]">
                     {c.name}
                   </th>
-                  <td className={`py-4 pr-4 text-[0.95rem] ${c.status === 'full' ? 'text-text' : 'text-muted'}`}>
+                  <td className={`py-3.5 pr-4 text-[0.95rem] ${c.status === 'full' ? 'text-text' : 'text-muted'}`}>
                     {STATUS[c.status]}
                   </td>
-                  <td className="hidden py-4 text-[0.95rem] text-muted md:table-cell">{c.note}</td>
+                  <td className="hidden py-3.5 text-[0.95rem] text-muted md:table-cell">{c.note}</td>
                 </tr>
               ))}
             </tbody>

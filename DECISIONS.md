@@ -3,6 +3,54 @@
 Running log of assumptions and decisions made during the rebuild. Newest first.
 Each entry: date, decision, reasoning, alternatives rejected.
 
+## 2026-11-04: Third pass (product first, the instrument, honest outages)
+
+**D-044. The page shows the product, set plainly.**
+The second pass still read as generated: every section was a giant
+sentence-with-a-period headline over a muted paragraph, in a tightly
+tracked grotesk. The home page now leads with the product itself: the
+score check, a full example report laid out like the real result page,
+the no-history answer, the backtest table, the API. Headings are plain
+titles at moderate sizes; type is IBM Plex Sans (tabular figures in
+data) with IBM Plex Mono only for code, addresses and API fields.
+Rejected: another display face (the problem was the treatment, not only
+the family).
+
+**D-043. The watch movement is gone; the instrument reads the score
+(replaces D-041).**
+A watch movement has no honest connection to a credit score; captions
+that tried to draw one ("the escapement holds the train still...") were a
+stretch. The one object that belongs is an instrument that displays the
+product's output, so that is what the 3D is now: a dial gauge printed at
+the model's real band, grade cutoffs and operating cutoff
+(`lib/instrument`). On the home page it stays beside the first four
+sections and its reading is literally what the text describes: the
+example wallet's 742, then no reading and a NO HISTORY flag (what the API
+returns as `noBorrowHistory`), then the 578 cutoff with the flagged zone
+lit. On a result page it reads the wallet's actual score. It renders only
+while something on it moves and then stops, so scrolling past it costs
+nothing; three.js loads after first paint and the flat SVG gauge stands in
+until then or without WebGL. The Blender renders, the 48-frame explode
+(which stuttered on a MacBook Air while frames decoded) and
+`scripts/calibre` are removed.
+
+**D-042. A provider outage is not an empty wallet.**
+The model's gates read absence as a verdict: no transactions meant "new
+wallet", no borrows meant "no borrowing history". When the transaction or
+lending sources failed (bad keys, network), the website said "No onchain
+history" and the v1 API returned a `noBorrowHistory` envelope, both false.
+`lib/scoring/availability.ts` now decides whether a wallet could be read
+at all: if every transaction-history source failed, or no lending
+deployment covering the chain answered (The Graph results now carry
+`deployments` and `answered`), the result page shows a "could not read
+this wallet" state, the legacy route returns 503, and v1 returns 503 after
+trying last-known-good, with the metered call refunded (pricing promises
+error-path calls are free). `tests/unit/liveScoring.test.ts` runs the real
+pipeline (adapters, features, model, envelope) against provider-shaped
+responses: a borrower scores in band with full completeness, liquidations
+lower the score, a non-borrower gets the honest no-history state, and
+each outage is a 503.
+
 ## 2026-11-04: Site redesign, second pass ("The Calibre")
 
 **D-041. The calibre is rendered offline, not in the browser (replaces

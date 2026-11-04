@@ -4,7 +4,6 @@ import report from '@/reports/backtest/latest.json'
 import { ChainBarChart, type ChainDatum } from '@/components/retrospective/ChainBarChart'
 import { ReliabilityChart } from '@/components/retrospective/ReliabilityChart'
 import { SiteFooter } from '@/components/site/SiteFooter'
-import { Plate } from '@/components/site/Plate'
 import { CONFUSION } from '@/lib/site/modelFacts'
 import { ACCELERATOR } from '@/lib/site/publicFacts'
 
@@ -95,7 +94,7 @@ export default function RetrospectivePage() {
   ]
 
   const section = 'frame grid gap-x-[var(--gutter)] gap-y-10 border-t border-text/15 py-[12svh] lg:grid-cols-12'
-  const h2 = 't-headline text-[clamp(2rem,3.2vw,3.2rem)] text-text'
+  const h2 = 't-headline text-[clamp(1.6rem,2.4vw,2.2rem)] text-text'
   const limits = [
     <>
       Liquidation is a proxy for default, not the same thing. A wallet can be liquidated by a price wick while
@@ -131,7 +130,7 @@ export default function RetrospectivePage() {
           <p className="t-label text-muted">
             Model {modelVersion}. Backtest generated {dateLabel}.
           </p>
-          <h1 id="retro-heading" className="t-display mt-6 max-w-[14ch] text-[clamp(3rem,7.6vw,8.6rem)] text-text">
+          <h1 id="retro-heading" className="t-display mt-4 max-w-[18ch] text-[clamp(2.4rem,4.6vw,4.4rem)] text-text">
             The liquidation retrospective
           </h1>
           <div className="mt-10 grid grid-cols-1 gap-x-[var(--gutter)] gap-y-8 lg:grid-cols-12">
@@ -147,14 +146,6 @@ export default function RetrospectivePage() {
           </div>
         </section>
 
-        <div className="relative mb-[4svh] aspect-[21/9] w-full overflow-hidden sm:aspect-[3/1]">
-          <Plate
-            name="calibre-escapement"
-            sizes="100vw"
-            imgClassName="absolute inset-0 h-full w-full object-cover object-[50%_42%]"
-            alt="The balance and escapement of the ChainScore calibre."
-          />
-        </div>
 
         {/* Headline metrics */}
         <section className={section} aria-labelledby="metrics-heading">
@@ -177,7 +168,7 @@ export default function RetrospectivePage() {
             {headline.map((m) => (
               <div key={m.label} className="border-t border-text/15 pt-4">
                 <dt className="t-label text-muted">{m.label}</dt>
-                <dd className="t-display mt-2 text-[clamp(3rem,4.6vw,4.6rem)] text-text">{m.value}</dd>
+                <dd className="t-figure mt-1 text-[2.6rem] font-medium text-text">{m.value}</dd>
                 <dd className="t-body mt-3 max-w-[34ch] text-[0.95rem] text-muted">{m.description}</dd>
               </div>
             ))}
@@ -188,7 +179,7 @@ export default function RetrospectivePage() {
         <section className={section} aria-labelledby="matrix-heading">
           <div className="lg:col-span-4">
             <h2 id="matrix-heading" className={h2}>
-              Wins and misses, counted the same way.
+              Wins and misses, counted the same way
             </h2>
             <p className="t-body mt-5 text-muted">
               At the operating cutoff of {operatingPoint.scoreCutoff} the model flags {fmt(CONFUSION.tp)} of the{' '}
@@ -203,10 +194,10 @@ export default function RetrospectivePage() {
               <thead>
                 <tr className="border-y border-text/15">
                   <td className="py-3" />
-                  <th scope="col" className="t-label py-3 pl-4 font-normal text-muted">
+                  <th scope="col" className="t-label py-3 pl-4 text-right font-normal text-muted">
                     Liquidated
                   </th>
-                  <th scope="col" className="t-label py-3 pl-4 font-normal text-muted">
+                  <th scope="col" className="t-label py-3 pl-4 text-right font-normal text-muted">
                     Not liquidated
                   </th>
                 </tr>
@@ -218,13 +209,13 @@ export default function RetrospectivePage() {
                 ].map(([name, rule, a, b], row) => (
                   <tr key={name as string} className="border-b border-text/15">
                     <th scope="row" className="py-6 pr-4 align-top font-normal">
-                      <span className="t-headline block text-[1.35rem] text-text">{name}</span>
+                      <span className="block text-[1rem] text-text">{name}</span>
                       <span className="t-label text-muted">{rule}</span>
                     </th>
-                    <td className={`t-display py-6 pl-4 align-top text-[clamp(2.4rem,4vw,4.2rem)] ${row === 0 ? 'text-danger' : 'text-text'}`}>
+                    <td className={`t-figure py-5 pl-4 text-right align-top text-[1.8rem] ${row === 0 ? 'text-danger' : 'text-text'}`}>
                       {fmt(a as number)}
                     </td>
-                    <td className="t-display py-6 pl-4 align-top text-[clamp(2.4rem,4vw,4.2rem)] text-text">{fmt(b as number)}</td>
+                    <td className="t-figure py-5 pl-4 text-right align-top text-[1.8rem] text-text">{fmt(b as number)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -236,7 +227,7 @@ export default function RetrospectivePage() {
         <section className={section} aria-labelledby="chain-heading">
           <div className="lg:col-span-4">
             <h2 id="chain-heading" className={h2}>
-              Not every chain is equally predictable.
+              Not every chain is equally predictable
             </h2>
             <p className="t-body mt-5 text-muted">
               PR-AUC by chain, from the same backtest. The weakest slice is{' '}
@@ -275,7 +266,7 @@ export default function RetrospectivePage() {
         {/* Limitations */}
         <section className={section} aria-labelledby="limitations-heading">
           <h2 id="limitations-heading" className={`${h2} lg:col-span-4`}>
-            What this does not prove.
+            What this does not prove
           </h2>
           <div className="lg:col-span-7 lg:col-start-6">
             <ul>
@@ -300,7 +291,6 @@ export default function RetrospectivePage() {
         modelVersion={modelVersion}
         backtestDate={dateLabel}
         alta={ACCELERATOR}
-        showPlate={false}
       />
     </>
   )

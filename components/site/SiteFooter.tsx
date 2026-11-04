@@ -1,6 +1,5 @@
 import Link from 'next/link'
 import { WalletInput } from '@/components/WalletInput'
-import { Plate } from './Plate'
 import { Wordmark } from './Logo'
 
 // Closing: one more chance to check a wallet, the calibre from above, and
@@ -21,7 +20,7 @@ const COLUMNS: Array<{ title: string; links: Array<{ label: string; href: string
     links: [
       { label: 'Backtest retrospective', href: '/retrospective' },
       { label: 'Coverage', href: '/#coverage' },
-      { label: 'Method', href: '/#method' },
+      { label: 'Example report', href: '/#report' },
     ],
   },
   {
@@ -38,35 +37,26 @@ export function SiteFooter({
   modelVersion,
   backtestDate,
   alta,
-  showPlate = true,
 }: {
   modelVersion: string
   backtestDate: string
   alta: string
-  showPlate?: boolean
 }) {
   return (
     <footer className="relative border-t border-text/10 bg-background text-text">
-      <div className="frame grid grid-cols-1 items-center gap-x-[var(--gutter)] gap-y-12 pt-[14svh] lg:grid-cols-12">
-        <div className="lg:col-span-6 xl:col-span-5">
-          <h2 className="t-display text-[clamp(2.4rem,4.6vw,5.2rem)] text-text">Check a wallet before you lend to it.</h2>
-          <p className="t-body mb-6 mt-5 max-w-[42ch] text-muted">
-            Free, from public chain data. If the wallet has never borrowed, you will get that answer instead of a
-            number.
+      <div className="frame grid grid-cols-1 items-end gap-x-[var(--gutter)] gap-y-6 pt-20 lg:grid-cols-12 lg:pt-28">
+        <div className="lg:col-span-5">
+          <h2 className="t-headline text-[clamp(1.6rem,2.4vw,2.2rem)] text-text">Check a wallet</h2>
+          <p className="t-body mt-3 max-w-[44ch] text-muted">
+            Free, from public chain data. If it has never borrowed, you get that answer instead of a number.
           </p>
+        </div>
+        <div className="lg:col-span-6 lg:col-start-7">
           <WalletInput />
         </div>
-        {showPlate && (
-          <figure className="lg:col-span-6 lg:col-start-7 xl:col-span-6 xl:col-start-7">
-            <Plate name="calibre-plan" sizes="(min-width: 1024px) 46vw, 100vw" imgClassName="mx-auto h-auto w-full max-w-[44rem]" />
-            <figcaption className="t-label mt-3 text-center text-muted">
-              The ChainScore calibre from above: 36.6 mm, seventeen jewels, 18,000 beats an hour.
-            </figcaption>
-          </figure>
-        )}
       </div>
 
-      <div className="frame mt-[12svh] grid grid-cols-2 gap-x-[var(--gutter)] gap-y-10 border-t border-text/15 pt-10 sm:grid-cols-4">
+      <div className="frame mt-20 grid grid-cols-2 gap-x-[var(--gutter)] gap-y-10 border-t border-text/15 pt-10 sm:grid-cols-4">
         <div className="col-span-2 sm:col-span-1">
           <Wordmark />
           <p className="t-body mt-4 max-w-[30ch] text-[0.9375rem] text-muted">Credit risk infrastructure for onchain lending.</p>

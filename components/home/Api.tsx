@@ -15,16 +15,16 @@ const SPEC = [
 export function Api({ tabs }: { tabs: ConsoleTab[] }) {
   return (
     <section id="api" aria-labelledby="api-heading" className="scroll-mt-16 border-t border-text/10">
-      <div className="frame py-[16svh]">
+      <div className="frame py-20 lg:py-28">
         <div className="grid grid-cols-1 gap-x-[var(--gutter)] gap-y-14 lg:grid-cols-12">
           <div className="lg:col-span-5">
-            <h2 id="api-heading" className="t-display text-[clamp(2.4rem,4.4vw,5rem)] text-text">
-              One request per underwriting decision.
+            <h2 id="api-heading" className="t-headline text-[clamp(1.6rem,2.4vw,2.2rem)] text-text">
+              The API
             </h2>
-            <p className="t-body mt-6 max-w-[42ch] text-muted">
-              Send an address and get back the score, a calibrated default probability, the factor breakdown and
-              integrity flags. A decision made today can still be explained next year, because every response says
-              which model made it and from what data.
+            <p className="t-body mt-3 max-w-[44ch] text-muted">
+              One authenticated request per underwriting decision. Send an address, get back the score, the default
+              probability, the factor breakdown and integrity flags. Every response names the model that produced it
+              and how complete its data was, so a decision can still be explained a year later.
             </p>
             <dl className="mt-10">
               {SPEC.map(([k, v]) => (

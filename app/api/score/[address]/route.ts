@@ -7,6 +7,7 @@ import { computeCompleteness } from '@/lib/ingest/completeness'
 import { getTokenBalances } from '@/lib/data/alchemy'
 import { getAaveActivity, getCompoundActivity, getUniswapActivity } from '@/lib/data/thegraph'
 import { computeScore } from '@/lib/data/mlScorer'
+import { assessReadability } from '@/lib/scoring/availability'
 import { computeSolanaScore } from '@/lib/data/solanaScorer'
 import {
   getSolanaTransactionHistory,
@@ -126,8 +127,8 @@ export async function GET(
   const firstTxResult = firstTx.status === 'fulfilled' ? firstTx.value : { timestamp: null, error: 'fetch failed' }
   const txHistResult = txHistory.status === 'fulfilled' ? txHistory.value : { txCount: 0, txCount30d: 0, txCount90d: 0, txCount180d: 0, activeDaysCount: 0, activeMonthsLast12: 0, error: 'fetch failed' }
   const tokenResult = tokenData.status === 'fulfilled' ? tokenData.value : { totalPortfolioUSD: 0, stablecoinPct: 0, tokenDiversity: 0, hasETH: false, hasStakedETH: false, hasENS: false, hasAave: false, hasCompound: false, hasUniswapLP: false, isGnosisSafe: false, error: 'fetch failed' }
-  const aaveResult = aaveData.status === 'fulfilled' ? aaveData.value : { borrows: 0, repays: 0, liquidations: 0, error: 'fetch failed' }
-  const compoundResult = compoundData.status === 'fulfilled' ? compoundData.value : { borrows: 0, repays: 0, liquidations: 0, error: 'fetch failed' }
+  const aaveResult = aaveData.status === 'fulfilled' ? aaveData.value : { borrows: 0, repays: 0, liquidations: 0, deployments: 1, answered: 0, error: 'fetch failed' }
+  const compoundResult = compoundData.status === 'fulfilled' ? compoundData.value : { borrows: 0, repays: 0, liquidations: 0, deployments: 1, answered: 0, error: 'fetch failed' }
   const uniswapResult = uniswapData.status === 'fulfilled' ? uniswapData.value : { hasLP: false, error: 'fetch failed' }
   const ensName = ensLookup.status === 'fulfilled' ? ensLookup.value : null
 
@@ -136,6 +137,20 @@ export async function GET(
   if (aaveResult.error) errors.aave = aaveResult.error
   if (compoundResult.error) errors.compound = compoundResult.error
   if (uniswapResult.error) errors.uniswap = uniswapResult.error
+
+  // An outage is not an empty wallet (D-042): refuse rather than report
+  // "no history" when the history or lending sources did not answer.
+  const readability = assessReadability({
+    firstTxError: firstTxResult.error,
+    historyError: txHistResult.error,
+    lending: [aaveResult, compoundResult],
+  })
+  if (!readability.ok) {
+    return NextResponse.json(
+      { error: `${readability.message} The wallet was not scored; retry shortly.`, degradedSources: Object.keys(errors) },
+      { status: 503 }
+    )
+  }
 
   const protocolsUsed: string[] = []
   if (aaveResult.borrows > 0 || aaveResult.repays > 0 || tokenResult.hasAave) protocolsUsed.push('Aave')

@@ -7,6 +7,7 @@ import { getTokenBalances } from '@/lib/data/alchemy'
 import { getAaveActivity, getCompoundActivity, getUniswapActivity } from '@/lib/data/thegraph'
 import { computeScore } from '@/lib/data/mlScorer'
 import { getChain } from '@/lib/chains'
+import { assessReadability } from './availability'
 import type { RawWalletData } from '@/types'
 import {
   buildEnvelope,
@@ -79,8 +80,8 @@ export async function scoreEvmWallet(inputAddress: string, chainSlug: string): P
       ? txHistory.value
       : { txCount: 0, txCount30d: 0, txCount90d: 0, txCount180d: 0, activeDaysCount: 0, activeMonthsLast12: 0, records: [], error: 'fetch failed' }
   const tokenResult = tokenData.status === 'fulfilled' ? tokenData.value : { totalPortfolioUSD: 0, stablecoinPct: 0, tokenDiversity: 0, hasETH: false, hasStakedETH: false, hasENS: false, hasAave: false, hasCompound: false, hasUniswapLP: false, isGnosisSafe: false, error: 'fetch failed' }
-  const aaveResult = aaveData.status === 'fulfilled' ? aaveData.value : { borrows: 0, repays: 0, liquidations: 0, error: 'fetch failed' }
-  const compoundResult = compoundData.status === 'fulfilled' ? compoundData.value : { borrows: 0, repays: 0, liquidations: 0, error: 'fetch failed' }
+  const aaveResult = aaveData.status === 'fulfilled' ? aaveData.value : { borrows: 0, repays: 0, liquidations: 0, deployments: 1, answered: 0, error: 'fetch failed' }
+  const compoundResult = compoundData.status === 'fulfilled' ? compoundData.value : { borrows: 0, repays: 0, liquidations: 0, deployments: 1, answered: 0, error: 'fetch failed' }
   const uniswapResult = uniswapData.status === 'fulfilled' ? uniswapData.value : { hasLP: false, error: 'fetch failed' }
   const ensName = ensLookup.status === 'fulfilled' ? ensLookup.value : null
 
@@ -89,6 +90,23 @@ export async function scoreEvmWallet(inputAddress: string, chainSlug: string): P
   if (aaveResult.error) errors.aave = aaveResult.error
   if (compoundResult.error) errors.compound = compoundResult.error
   if (uniswapResult.error) errors.uniswap = uniswapResult.error
+
+  // If the history or lending sources did not answer, an empty reading is an
+  // outage, not a wallet with no history (D-042). Serve last-known-good if
+  // there is one; otherwise say so rather than return a false verdict.
+  const readability = assessReadability({
+    firstTxError: firstTxResult.error,
+    historyError: txHistResult.error,
+    lending: [aaveResult, compoundResult],
+  })
+  if (!readability.ok) {
+    const lkg = await getLastKnownGoodShared(evmAddress, chain.slug)
+    if (lkg) return { envelope: lkg }
+    return {
+      envelope: null,
+      error: { status: 503, message: `${readability.message} The wallet was not scored; retry shortly.` },
+    }
+  }
 
   // Every source failed: degrade to last-known-good rather than an empty score.
   const totalSourcesFailed = Object.keys(errors).length

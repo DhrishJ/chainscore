@@ -80,35 +80,33 @@ img {
 }
 
 @layer components {
-  /* ---------- Type: one family, Schibsted Grotesk ---------- */
+  /* ---------- Type: IBM Plex Sans, set plainly ---------- */
 
   .t-display {
     font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
     font-weight: 500;
-    letter-spacing: -0.042em;
-    line-height: 0.93;
+    letter-spacing: -0.02em;
+    line-height: 1.06;
     text-wrap: balance;
   }
 
   .t-headline {
     font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
     font-weight: 500;
-    letter-spacing: -0.03em;
-    line-height: 1.02;
+    letter-spacing: -0.012em;
+    line-height: 1.15;
     text-wrap: balance;
   }
 
-  /* Kept for older pages: the former serif voice now reads in the house
-     face at a lighter weight. */
+  /* Kept for older pages. */
   .t-serif {
     font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
     font-weight: 400;
-    letter-spacing: -0.025em;
-    line-height: 1.12;
+    letter-spacing: -0.01em;
+    line-height: 1.2;
   }
 
-  /* Small print: captions, table heads, field labels. Sentence case, no
-     tracking games. */
+  /* Small print: captions, table heads, field labels. */
   .t-label,
   .t-engraved {
     font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
@@ -119,9 +117,8 @@ img {
   }
 
   .t-body {
-    font-size: 1.0625rem;
-    line-height: 1.58;
-    letter-spacing: -0.006em;
+    font-size: 1rem;
+    line-height: 1.62;
     text-wrap: pretty;
   }
 
@@ -129,6 +126,13 @@ img {
     font-family: var(--font-mono), ui-monospace, SFMono-Regular, monospace;
     font-size: 0.8125rem;
     line-height: 1.7;
+  }
+
+  /* Figures in product UI: tabular, so columns of numbers line up. */
+  .t-figure {
+    font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
   }
 
   /* ---------- Layout ---------- */
@@ -165,12 +169,12 @@ img {
     align-items: center;
     justify-content: center;
     gap: 0.75rem;
-    min-height: 3rem;
-    padding: 0 1.35rem;
+    min-height: 2.75rem;
+    padding: 0 1.15rem;
     font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
     font-size: 0.9375rem;
     font-weight: 500;
-    letter-spacing: -0.005em;
+    letter-spacing: 0;
     border-radius: 0;
     transition: background-color 0.3s var(--ease-out), color 0.3s var(--ease-out),
       border-color 0.3s var(--ease-out);

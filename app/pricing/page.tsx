@@ -3,7 +3,6 @@ import { PLANS, DEFAULT_OVERAGE_CAP_USD, type Plan } from '@/lib/pricing/plans'
 import { SiteFooter } from '@/components/site/SiteFooter'
 import { BACKTEST, MODEL_VERSION } from '@/lib/site/modelFacts'
 import { ACCELERATOR } from '@/lib/site/publicFacts'
-import { Plate } from '@/components/site/Plate'
 
 // The pricing page renders lib/pricing/plans.ts directly: what the metering
 // layer enforces is exactly what this page shows, by construction (Section
@@ -45,23 +44,19 @@ export default function PricingPage() {
           className="frame grid grid-cols-1 gap-x-[var(--gutter)] gap-y-10 pb-[8svh] pt-12 sm:pt-16 lg:grid-cols-12 lg:items-end"
           aria-labelledby="pricing-heading"
         >
-          <div className="lg:col-span-7">
-            <p className="t-label text-muted">Two meters, and overage capped by you.</p>
-            <h1 id="pricing-heading" className="t-display mt-6 max-w-[13ch] text-[clamp(3rem,7vw,8rem)] text-text">
-              Pricing that cannot surprise you.
+          <div className="lg:col-span-8">
+            <h1 id="pricing-heading" className="t-display max-w-[20ch] text-[clamp(2.4rem,4.6vw,4.4rem)] text-text">
+              Pricing
             </h1>
-            <p className="t-body mt-10 max-w-[56ch] text-muted">
-              Two meters: per-score lookups and monitored wallets with webhooks. Overage only ever accrues up to a cap
-              you set yourself (default ${DEFAULT_OVERAGE_CAP_USD}/month); past it, requests pause instead of billing.
-              Every response carries your live usage in its headers.
+            <p className="t-headline mt-4 text-[clamp(1.2rem,1.8vw,1.6rem)] text-text">
+              Two meters, and overage capped by you
+            </p>
+            <p className="t-body mt-6 max-w-[56ch] text-muted">
+              You pay for per-score lookups and for monitored wallets with webhooks. Overage only ever accrues up to a
+              cap you set yourself (default ${DEFAULT_OVERAGE_CAP_USD}/month); past it, requests pause instead of
+              billing. Every response carries your live usage in its headers.
             </p>
           </div>
-          <figure className="lg:col-span-5">
-            <Plate name="calibre-keyless" sizes="(min-width: 1024px) 40vw, 100vw" imgClassName="h-auto w-full" />
-            <figcaption className="t-label mt-3 text-muted">
-              The keyless works: ratchet wheel, crown wheel, and the click that keeps the mainspring from running back.
-            </figcaption>
-          </figure>
         </section>
 
         <section className="frame pb-[10svh]" aria-label="Plans">
@@ -136,7 +131,6 @@ export default function PricingPage() {
           timeZone: 'UTC',
         })}
         alta={ACCELERATOR}
-        showPlate={false}
       />
     </>
   )

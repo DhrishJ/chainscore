@@ -86,6 +86,26 @@ export async function meterScore(
   }
 }
 
+// Give back a metered call that produced no score because the upstream data
+// sources were unavailable (D-042). Pricing promises error-path calls are
+// never counted. Only call this after a meterScore that actually counted
+// (used > 0); like metering it fails open, logging rather than throwing.
+export async function refundScore(keyHashPrefix: string): Promise<void> {
+  const config = redisConfig()
+  if (!config) return
+  try {
+    const response = await fetch(config.url.replace(/\/+$/, ''), {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${config.token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(['DECR', usageRedisKey(keyHashPrefix)]),
+      signal: AbortSignal.timeout(1000),
+    })
+    if (!response.ok) throw new Error(`upstash http ${response.status}`)
+  } catch (e) {
+    console.error(`[metering] refund failed (${e instanceof Error ? e.name : 'error'})`)
+  }
+}
+
 // Read-only usage lookup for GET /api/v1/usage. A plain GET, never an INCR:
 // checking usage must not itself count as usage. Same fail-open posture as
 // meterScore: a Redis outage reports zero rather than 500ing the endpoint.

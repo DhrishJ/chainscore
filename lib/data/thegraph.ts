@@ -38,6 +38,11 @@ export interface AaveActivityResult {
   borrows: number
   repays: number
   liquidations: number
+  // Verified deployments of this protocol family on the chain, and how many
+  // of them answered. answered === 0 with deployments > 0 means the lending
+  // history is unknown, not empty (lib/scoring/availability).
+  deployments?: number
+  answered?: number
   error?: string
 }
 
@@ -74,7 +79,7 @@ async function aggregateFamily(
   chainSlug: string,
 ): Promise<AaveActivityResult> {
   const deps = deploymentsFor(family, chainSlug)
-  if (deps.length === 0) return { borrows: 0, repays: 0, liquidations: 0 }
+  if (deps.length === 0) return { borrows: 0, repays: 0, liquidations: 0, deployments: 0, answered: 0 }
 
   const addr = address.toLowerCase()
   let borrows = 0
@@ -93,7 +98,14 @@ async function aggregateFamily(
     }
   })
 
-  return { borrows, repays, liquidations, ...(errors.length ? { error: errors.join('; ') } : {}) }
+  return {
+    borrows,
+    repays,
+    liquidations,
+    deployments: deps.length,
+    answered: deps.length - errors.length,
+    ...(errors.length ? { error: errors.join('; ') } : {}),
+  }
 }
 
 export async function getAaveActivity(address: string, chainSlug = 'ethereum'): Promise<AaveActivityResult> {
@@ -104,6 +116,8 @@ export interface CompoundActivityResult {
   borrows: number
   repays: number
   liquidations: number
+  deployments?: number
+  answered?: number
   error?: string
 }
 

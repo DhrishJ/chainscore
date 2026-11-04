@@ -3,8 +3,8 @@ import Link from 'next/link'
 import { isAddress } from 'viem'
 import { createPublicClient, http } from 'viem'
 import { mainnet } from 'viem/chains'
-import { ScoreGauge } from '@/components/ScoreGauge'
-import { ScoreCountUp } from '@/components/ScoreCountUp'
+import { ScoreInstrument } from '@/components/instrument/ScoreInstrument'
+import { BACKTEST, GRADE_CUTOFFS, MODEL_VERSION, SCORE_MAX, SCORE_MIN } from '@/lib/site/modelFacts'
 import { FactorCard } from '@/components/FactorCard'
 import { RadarFactors } from '@/components/explain/RadarFactors'
 import { ContributionWaterfall } from '@/components/explain/ContributionWaterfall'
@@ -28,7 +28,22 @@ import {
 import { computeSolanaScore } from '@/lib/data/solanaScorer'
 import { env } from '@/lib/env.server'
 import { clientEnv } from '@/lib/env.client'
+import { assessReadability } from '@/lib/scoring/availability'
 import type { ScoreResult, RawWalletData } from '@/types'
+
+// Not scored because the data sources did not answer (D-042). Distinct from
+// "never borrowed": an outage is not a fact about the wallet.
+interface Unreadable {
+  unreadable: true
+  message: string
+  degradedSources: string[]
+}
+
+type Outcome = ScoreResult | Unreadable | null
+
+function isUnreadable(o: Outcome): o is Unreadable {
+  return Boolean(o && 'unreadable' in o)
+}
 
 interface Props {
   params: { address: string }
@@ -43,7 +58,7 @@ const ensClient = createPublicClient({
   ),
 })
 
-async function resolveAndScore(input: string, chainSlug: string): Promise<ScoreResult | null> {
+async function resolveAndScore(input: string, chainSlug: string): Promise<Outcome> {
   const chain = getChain(chainSlug)
   let address = input
 
@@ -101,11 +116,11 @@ async function resolveAndScore(input: string, chainSlug: string): Promise<ScoreR
   const aaveResult =
     aaveData.status === 'fulfilled'
       ? aaveData.value
-      : { borrows: 0, repays: 0, liquidations: 0, error: 'fetch failed' }
+      : { borrows: 0, repays: 0, liquidations: 0, deployments: 1, answered: 0, error: 'fetch failed' }
   const compoundResult =
     compoundData.status === 'fulfilled'
       ? compoundData.value
-      : { borrows: 0, repays: 0, liquidations: 0, error: 'fetch failed' }
+      : { borrows: 0, repays: 0, liquidations: 0, deployments: 1, answered: 0, error: 'fetch failed' }
   const uniswapResult =
     uniswapData.status === 'fulfilled' ? uniswapData.value : { hasLP: false, error: 'fetch failed' }
   const ensName = ensLookup.status === 'fulfilled' ? ensLookup.value : null
@@ -115,6 +130,15 @@ async function resolveAndScore(input: string, chainSlug: string): Promise<ScoreR
   if (aaveResult.error) errors.aave = aaveResult.error
   if (compoundResult.error) errors.compound = compoundResult.error
   if (uniswapResult.error) errors.uniswap = uniswapResult.error
+
+  const readability = assessReadability({
+    firstTxError: firstTxResult.error,
+    historyError: txHistResult.error,
+    lending: [aaveResult, compoundResult],
+  })
+  if (!readability.ok) {
+    return { unreadable: true, message: readability.message, degradedSources: Object.keys(errors) }
+  }
 
   const protocolsUsed: string[] = []
   if (aaveResult.borrows > 0 || aaveResult.repays > 0 || tokenResult.hasAave) protocolsUsed.push('Aave')
@@ -165,7 +189,7 @@ async function resolveAndScore(input: string, chainSlug: string): Promise<ScoreR
   return result
 }
 
-async function resolveAndScoreSolana(address: string): Promise<ScoreResult | null> {
+async function resolveAndScoreSolana(address: string): Promise<Outcome> {
   if (!isSolanaAddress(address)) return null
 
   const [txHistory, balance, tokenData, defiData] = await Promise.allSettled([
@@ -174,6 +198,15 @@ async function resolveAndScoreSolana(address: string): Promise<ScoreResult | nul
     getSolanaTokenData(address),
     getSolanaDefiActivity(address),
   ])
+
+  // Without the history or the DeFi lookups, an empty reading is an outage.
+  if (txHistory.status === 'rejected' || defiData.status === 'rejected') {
+    return {
+      unreadable: true,
+      message: "Could not read this wallet's Solana history from the data provider.",
+      degradedSources: ['helius'],
+    }
+  }
 
   const tx = txHistory.status === 'fulfilled' ? txHistory.value : { txCount: 0, activeMonthsLast12: 0, firstTimestamp: null }
   const bal = balance.status === 'fulfilled' ? balance.value : { solBalance: 0 }
@@ -244,14 +277,19 @@ function scoreTextColor(score: number): string {
   return 'text-danger'
 }
 
+// The instrument's scale: the model's real band, cutoffs and version.
+const SPEC = { min: SCORE_MIN, max: SCORE_MAX, grades: GRADE_CUTOFFS, cutoff: BACKTEST.cutoff, modelVersion: MODEL_VERSION }
+
 export default async function ScorePage({ params, searchParams }: Props) {
   const { address } = params
   const isSol = isSolanaAddress(address)
   const chainSlug = searchParams.chain || (isSol ? 'solana' : 'ethereum')
   const chain = isSol || chainSlug === 'solana' ? null : getChain(chainSlug)
-  const result = isSol || chainSlug === 'solana'
+  const outcome = isSol || chainSlug === 'solana'
     ? await resolveAndScoreSolana(address)
     : await resolveAndScore(address, chainSlug)
+  const unreadable = isUnreadable(outcome) ? outcome : null
+  const result = isUnreadable(outcome) ? null : outcome
   const displayAddress = result?.ens || address
 
   const shortAddress = displayAddress.length > 20 ? `${displayAddress.slice(0, 10)}...${displayAddress.slice(-8)}` : displayAddress
@@ -297,11 +335,42 @@ export default async function ScorePage({ params, searchParams }: Props) {
         )}
       </nav>
 
-      {!result ? (
+      {unreadable ? (
+        <section className="py-16 sm:py-24" aria-labelledby="unreadable-heading">
+          <p className="t-label text-muted">Not scored · {networkName}</p>
+          <h1 id="unreadable-heading" className="t-display mt-5 max-w-[18ch] text-[clamp(2.2rem,4.4vw,4rem)] text-text">
+            We could not read this wallet just now
+          </h1>
+          <p className="t-label mt-6 text-muted">{shortAddress}</p>
+          <p className="t-body mt-6 max-w-[56ch] text-text">
+            {unreadable.message} Rather than show a score, or a &quot;no history&quot; verdict, built from missing data,
+            ChainScore shows nothing. The wallet itself may be fine.
+          </p>
+          {unreadable.degradedSources.length > 0 && (
+            <p className="t-body mt-3 max-w-[56ch] text-muted">
+              Sources that did not answer: {unreadable.degradedSources.join(', ')}.
+            </p>
+          )}
+          {process.env.NODE_ENV !== 'production' && (
+            <p className="t-body mt-3 max-w-[56ch] text-muted">
+              Running locally? Scoring calls Etherscan, Alchemy and The Graph, so it needs real ETHERSCAN_API_KEY,
+              ALCHEMY_API_KEY and THEGRAPH_API_KEY values in .env.local (and HELIUS_API_KEY for Solana).
+            </p>
+          )}
+          <div className="mt-10 flex flex-wrap gap-3">
+            <Link href={`/score/${address}?chain=${chainSlug}`} className="btn btn-ink">
+              Try again
+            </Link>
+            <Link href="/" className="btn btn-line">
+              Check another wallet
+            </Link>
+          </div>
+        </section>
+      ) : !result ? (
         <section className="py-16 sm:py-24">
-          <p className="t-label text-danger">Error · not scored</p>
-          <h1 className="t-display mt-5 text-[clamp(3rem,7vw,6.5rem)] text-text">
-            Unable to score this wallet<span className="text-accent">.</span>
+          <p className="t-label text-danger">Not scored</p>
+          <h1 className="t-display mt-5 max-w-[18ch] text-[clamp(2.2rem,4.4vw,4rem)] text-text">
+            Unable to score this wallet
           </h1>
           <p className="t-body mt-6 max-w-[52ch] text-muted">
             This address could not be resolved or scored. Check that it&apos;s a valid EVM address or
@@ -318,8 +387,8 @@ export default async function ScorePage({ params, searchParams }: Props) {
         <section className="grid gap-x-[var(--gutter)] gap-y-10 py-16 sm:py-24 lg:grid-cols-12">
           <div className="lg:col-span-7">
             <p className="t-label text-muted">No score · {networkName}</p>
-            <h1 className="t-display mt-5 text-[clamp(3rem,7vw,6.5rem)] text-text">
-              No borrowing history<span className="text-accent">.</span>
+            <h1 className="t-display mt-5 max-w-[18ch] text-[clamp(2.2rem,4.4vw,4rem)] text-text">
+              No borrowing history
             </h1>
             <p className="t-label mt-6 text-muted">{shortAddress}</p>
             <p className="t-body mt-6 max-w-[56ch] text-text">
@@ -340,6 +409,12 @@ export default async function ScorePage({ params, searchParams }: Props) {
             </Link>
           </div>
           <div className="lg:col-span-4 lg:col-start-9">
+            <ScoreInstrument
+              spec={SPEC}
+              state={{ reading: { kind: 'none' }, zone: false, tilt: [-0.2, -0.16] }}
+              label="ChainScore instrument: no reading, NO HISTORY flag shown"
+              className="mx-auto mb-6 w-full max-w-[22rem]"
+            />
             <div className="border border-text/20 bg-ink p-5 text-ink-fg">
               <p className="t-label text-ink-muted">What the API returns</p>
               <pre className="mt-4 font-mono text-[12.5px] leading-[1.8]">
@@ -357,8 +432,8 @@ export default async function ScorePage({ params, searchParams }: Props) {
       ) : result.newWallet ? (
         <section className="py-16 sm:py-24">
           <p className="t-label text-muted">No history · {networkName}</p>
-          <h1 className="t-display mt-5 text-[clamp(3rem,7vw,6.5rem)] text-text">
-            No onchain history<span className="text-accent">.</span>
+          <h1 className="t-display mt-5 max-w-[18ch] text-[clamp(2.2rem,4.4vw,4rem)] text-text">
+            No onchain history
           </h1>
           <p className="t-label mt-6 text-muted">{shortAddress}</p>
           <p className="t-body mt-6 max-w-[52ch] text-muted">
@@ -377,17 +452,21 @@ export default async function ScorePage({ params, searchParams }: Props) {
           {/* Reading */}
           <section className="grid items-center gap-x-[var(--gutter)] gap-y-8 lg:grid-cols-12" aria-label="Score">
             <div className="flex justify-center lg:col-span-5 lg:justify-start">
-              <ScoreGauge score={result.score} />
+              <ScoreInstrument
+                spec={SPEC}
+                state={{ reading: { kind: 'score', score: result.score }, zone: false, tilt: [-0.22, 0.26] }}
+                label={`ChainScore instrument reading ${result.score}, grade ${result.grade}`}
+                className="w-full max-w-[26rem]"
+              />
             </div>
 
             <div className="lg:col-span-7">
               <p className="t-label text-muted">{result.ens ? result.ens : shortAddress}</p>
 
               <div className="mt-2 flex flex-wrap items-end gap-x-6 gap-y-3">
-                <ScoreCountUp
-                  target={result.score}
-                  className={`t-display tnum text-[clamp(5.5rem,11vw,9.5rem)] leading-none ${scoreTextColor(result.score)}`}
-                />
+                <p className={`t-figure text-[clamp(4.5rem,9vw,7.5rem)] font-medium leading-none ${scoreTextColor(result.score)}`}>
+                  {result.score}
+                </p>
                 <div className="pb-3">
                   <span className={`t-headline inline-block border px-3 py-1 text-2xl ${gradeColor(result.grade)}`}>
                     {result.grade}

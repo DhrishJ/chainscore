@@ -11,9 +11,8 @@ serves it.
 ## Tech stack
 
 - Next.js 14 (App Router) on Vercel, TypeScript, Tailwind CSS
-- The calibre photographs (`public/calibre/`) are rendered offline in
-  Blender from `scripts/calibre/`; the site itself ships no WebGL and no
-  scroll library. Design system: `docs/DESIGN.md`
+- three.js for the score instrument (`lib/instrument/`), loaded after first
+  paint and rendered only while it moves. Design system: `docs/DESIGN.md`
 - shadcn/ui components (`components/ui/`)
 - Prisma over Postgres (Supabase-hosted)
 - viem / wagmi / RainbowKit for EVM wallet connect, `@solana/wallet-adapter-*`

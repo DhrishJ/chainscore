@@ -105,6 +105,12 @@
             "content": {
               "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } }
             }
+          },
+          "503": {
+            "description": "The transaction-history or lending data sources did not answer, so the wallet could not be judged. Nothing was scored and the call is not counted against quota. Retry shortly.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } }
+            }
           }
         }
       }

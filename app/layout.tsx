@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next'
-import { Fragment_Mono, Schibsted_Grotesk } from 'next/font/google'
+import { IBM_Plex_Mono, IBM_Plex_Sans } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import { Providers } from '@/components/Providers'
 import { Navbar } from '@/components/Navbar'
@@ -7,19 +7,19 @@ import { StructuredData } from '@/components/StructuredData'
 import { clientEnv } from '@/lib/env.client'
 import './globals.css'
 
-// House type (docs/DESIGN.md): Schibsted Grotesk sets everything, from
-// display to table figures (it has true tabular numerals). Fragment Mono
-// is reserved for code and addresses. Both are self-hosted by next/font at
-// build time (CSP font-src 'self').
-const sans = Schibsted_Grotesk({
+// House type (docs/DESIGN.md): IBM Plex Sans for everything people read,
+// with tabular figures in data; IBM Plex Mono only for code, addresses and
+// API fields. Self-hosted by next/font at build time (CSP font-src 'self').
+const sans = IBM_Plex_Sans({
   subsets: ['latin'],
+  weight: ['400', '500', '600'],
   variable: '--font-sans',
   display: 'swap',
 })
 
-const mono = Fragment_Mono({
+const mono = IBM_Plex_Mono({
   subsets: ['latin'],
-  weight: ['400'],
+  weight: ['400', '500'],
   variable: '--font-mono',
   display: 'swap',
   preload: false,
