@@ -122,7 +122,7 @@ The model is trained only on wallets that have borrowed, because only they have 
 
 The model is evaluated on a held-out set of wallets that entered the credit system after the training period. The backtest engine (`lib/backtest/engine.ts`) refuses any row whose features were observed after its as-of date, or whose outcome window opens before it.
 
-**Reweighting.** The holdout is an enriched sample: 7,720 rows, 1,933 of them positive, a sample base rate of 25.04%. Every metric is computed with sample weights that bring it back to the population base rate of 9.09%, so the numbers describe performance at the rate the model would actually face (`lib/backtest/metrics.ts`).
+**Reweighting.** The holdout is an enriched sample: 7,720 rows, 1,933 of them positive, so liquidated wallets make up 25% of rows. Every metric is computed with sample weights that bring it back to the deployed base rate of about 9.1%, so the numbers describe performance at the rate the model would actually face (`lib/backtest/metrics.ts`).
 
 **Headline metrics.**
 
@@ -139,10 +139,15 @@ The ChainScore figures are from the backtest holdout (`reports/backtest/latest.j
 
 | Measure | Value |
 |---|---|
-| Recall (share of liquidated wallets flagged) | 88.2% |
-| False positive rate (share of non-liquidated wallets flagged) | 48.5% |
-| Precision at the 9.09% base rate | 15.4% |
-| Share of all wallets flagged | 52.1% |
+| Recall (share of liquidated wallets flagged) | 88% (1,704 of 1,933) |
+| False positive rate (share of non-liquidated wallets flagged) | 48% (2,806 of 5,787) |
+| Precision at the deployed base rate of about 9.1% | 15.4% |
+| Share of all wallets flagged | 52% |
+
+|  | Liquidated | Not liquidated |
+|---|---|---|
+| Flagged (score below 578) | 1,704 | 2,806 |
+| Cleared (578 and up) | 229 | 2,981 |
 
 In plain terms: this cutoff catches nearly nine in ten wallets that went on to be liquidated, but it also flags about half of the wallets that did not. A flagged wallet is about 1.7 times as likely to be liquidated as the average borrower. The cutoff works as a broad screen, not a precise prediction. That is consistent with the limits of a fixed-window liquidation label, discussed below.
 
@@ -219,14 +224,14 @@ On the live partner API path, the wash trading and burst timing detectors run on
 
 | Network | Status | Notes |
 |---|---|---|
-| Ethereum | Full | Aave V2, Aave V3, Compound V2; complete transaction history |
+| Ethereum | Full | Aave V2/V3, Compound V2; complete transaction history |
 | Arbitrum | Full | Aave V3; complete transaction history |
 | Optimism | Full | Aave V3; complete transaction history |
 | Polygon | Full | Aave V3; complete transaction history |
 | Base | Full | Aave V3; complete transaction history |
-| Avalanche | Reduced | Aave V3 borrow detection is live; transaction-history features are reduced |
-| Scroll | Reduced | Aave V3 deployment is in the coverage registry and in the evaluation data; transaction-history features are reduced |
-| Solana | Separate | A separate scoring path on the website, not the evaluated model; not available on the partner API |
+| Avalanche | Reduced history | Borrow detection live; transaction-history features reduced |
+| Scroll | Reduced history | Borrow detection live; transaction-history features reduced |
+| Solana | Site only | Separate scoring path on the website, not the evaluated model; not yet on the partner API |
 
 Every score reports `dataCompleteness`, a value from 0 to 1 that shows how much of the feature input actually arrived, together with the list of sources that failed. A consumer can therefore tell a confident score from one computed on partial data.
 
@@ -279,7 +284,7 @@ tests/            Unit tests (Vitest) and end-to-end tests (Playwright)
 ## Known limitations
 
 1. **Liquidation is a proxy for default.** A wallet can be liquidated by a short-lived price spike and still be a responsible borrower. A wallet can also fail to repay in ways that never trigger an onchain liquidation.
-2. **A fixed outcome window is partly luck.** Whether a wallet is liquidated within a particular six-month window depends heavily on market conditions in that window, especially for wallets with short histories. This is the main reason PR-AUC is the weaker metric, and why the operating point has a 48.5% false positive rate at 88.2% recall.
+2. **A fixed outcome window is partly luck.** Whether a wallet is liquidated within a particular six-month window depends heavily on market conditions in that window, especially for wallets with short histories. This is the main reason PR-AUC is the weaker metric, and why the operating point has a 48% false positive rate at 88% recall.
 3. **Only covered deployments count.** Labels and lending features come from the covered Aave and Compound deployments. A wallet liquidated on a protocol outside the coverage set is counted as a negative.
 4. **Weaker on experienced borrowers.** Performance drops for wallets with more than 3 borrows (ROC-AUC 0.737, PR-AUC 0.352), and this segment is small in the holdout (372 rows).
 5. **Solana is not part of the evaluated model.** Solana scores on the website come from a separate path, and none of the evaluation results above apply to them.
@@ -294,7 +299,7 @@ These items extend work the code already sets up for. They are directions, not c
 
 - Retain lending events and related-address data on the live path, so that the instant repay and Sybil funding detectors run on every partner API score.
 - Connect the entity resolver to live scoring, so that clustered wallets are scored as one entity.
-- Add Scroll to the live chain configuration, and restore full transaction-history features for Avalanche and Scroll.
+- Restore full transaction-history features for Avalanche and Scroll.
 - Bring Solana scoring to the partner API.
 - Re-run labeling on later outcome windows under a new criteria version, to measure how stable the model is across market regimes.
 
