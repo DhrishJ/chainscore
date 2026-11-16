@@ -19,9 +19,11 @@ ChainScore takes a wallet address and returns a 300 to 850 score, a calibrated p
 
 ## Overview
 
-Most DeFi lending is overcollateralized: a borrower typically has to lock up more value than they take out. One reason is that a lending protocol cannot tell a borrower with years of clean repayments from a wallet created yesterday. The information needed to tell them apart already exists, because every borrow, repayment and liquidation is recorded onchain. What is missing is a way to turn that history into a measure of risk that is consistent, interpretable and calibrated.
+DeFi lending is almost always overcollateralized. To borrow, a wallet must first lock up collateral worth more than the loan, which keeps lenders safe but leaves credit capital-inefficient and out of reach for anyone who cannot post more than they need. The underlying problem is an information gap. A lending protocol sees only an address and a collateral balance, so a borrower with years of clean repayments looks the same as a wallet created yesterday.
 
-ChainScore is an off-chain scoring layer that does this. For each request it reads a wallet's history from public data sources, builds a 34-feature vector, and evaluates a calibrated XGBoost model. The output is a probability of default (PD) and the equivalent 300 to 850 score.
+The data needed to close that gap already exists. Every borrow, repayment and liquidation is recorded onchain, permanently and in public. What has been missing is a way to turn that record into a risk estimate a protocol can act on: consistent from one wallet to the next, interpretable by the borrower, and calibrated so that a stated probability matches what actually happens.
+
+ChainScore provides that estimate. Given a wallet address, it reads the wallet's history from public data sources, builds 34 features describing its lending record, activity and holdings, and evaluates a calibrated XGBoost model. It returns a probability of default (PD), the same risk expressed as a score from 300 to 850, and the factors that drove it.
 
 Three design commitments shape the system:
 
@@ -84,10 +86,6 @@ flowchart LR
    | `asOf`, `computedAt`, `cached`, `stale` | Freshness |
    | `newWallet`, `noBorrowHistory` | States in which no model score is issued |
 
-### Wallets with no borrow history
-
-The model is trained only on wallets that have borrowed, because only they have an observable credit outcome. A wallet with no detected borrows on a covered lending deployment therefore gets no number: it gets an explicit `noBorrowHistory` state. A wallet with no onchain activity at all is reported as `newWallet`. This avoids the misleading result of scoring an address the model has no basis to judge.
-
 ---
 
 ## The model
@@ -149,7 +147,7 @@ The ChainScore figures are from the backtest holdout (`reports/backtest/latest.j
 | Flagged (score below 578) | 1,704 | 2,806 |
 | Cleared (578 and up) | 229 | 2,981 |
 
-In plain terms: this cutoff catches nearly nine in ten wallets that went on to be liquidated, but it also flags about half of the wallets that did not. A flagged wallet is about 1.7 times as likely to be liquidated as the average borrower. The cutoff works as a broad screen, not a precise prediction. That is consistent with the limits of a fixed-window liquidation label, discussed below.
+In plain terms: this cutoff catches nearly nine in ten wallets that went on to be liquidated, but it also flags about half of the wallets that did not. A flagged wallet is about 1.7 times as likely to be liquidated as the average borrower. The cutoff works as a broad screen, not a precise prediction.
 
 **Calibration by bin (weighted).**
 
@@ -278,18 +276,6 @@ ml/               Exported model artifacts (model.json, model_meta.json) and tra
 reports/          Published backtest reports (JSON and Markdown)
 tests/            Unit tests (Vitest) and end-to-end tests (Playwright)
 ```
-
----
-
-## Known limitations
-
-1. **Liquidation is a proxy for default.** A wallet can be liquidated by a short-lived price spike and still be a responsible borrower. A wallet can also fail to repay in ways that never trigger an onchain liquidation.
-2. **A fixed outcome window is partly luck.** Whether a wallet is liquidated within a particular six-month window depends heavily on market conditions in that window, especially for wallets with short histories. This is the main reason PR-AUC is the weaker metric, and why the operating point has a 48% false positive rate at 88% recall.
-3. **Only covered deployments count.** Labels and lending features come from the covered Aave and Compound deployments. A wallet liquidated on a protocol outside the coverage set is counted as a negative.
-4. **Weaker on experienced borrowers.** Performance drops for wallets with more than 3 borrows (ROC-AUC 0.737, PR-AUC 0.352), and this segment is small in the holdout (372 rows).
-5. **Solana is not part of the evaluated model.** Solana scores on the website come from a separate path, and none of the evaluation results above apply to them.
-6. **Some differences between training and serving.** On the live path, `has_governance_vote` is currently always 0. Also, `days_since_first_defi` is derived from the wallet's first transaction rather than its first DeFi interaction.
-7. **Partial integrity coverage on live scores.** Two of the four detectors receive data on the live path, and entity resolution is not yet applied, as described in [Score integrity](#score-integrity).
 
 ---
 
