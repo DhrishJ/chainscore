@@ -51,6 +51,13 @@ describe('engineering agent repo guard (G4/G8)', () => {
   it('dotted traversal inside the repo cannot reach protected paths', () => {
     expect(checkWriteAllowed(ROOT, 'app/../ml/model.json').allowed).toBe(false)
     expect(checkWriteAllowed(ROOT, 'app/..\\..\\..\\anything').allowed).toBe(false)
+    expect(checkWriteAllowed(ROOT, 'app\\..\\ml\\model.json').allowed).toBe(false)
+    expect(checkWriteAllowed(ROOT, 'ml\\model.json').allowed).toBe(false)
+  })
+
+  it('treats backslashes as separators without refusing ordinary paths', () => {
+    expect(normalizeRepoPath(ROOT, 'lib\\format.ts')).toBe('lib/format.ts')
+    expect(normalizeRepoPath(ROOT, '..notes.md')).toBe('..notes.md')
   })
 
   it('command allowlist contains exactly the three gates and nothing shell-shaped', () => {

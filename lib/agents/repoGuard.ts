@@ -31,10 +31,19 @@ export interface GuardResult {
 }
 
 export function normalizeRepoPath(repoRoot: string, requested: string): string | null {
-  const resolved = path.resolve(repoRoot, requested)
+  // Treat backslashes as separators on every platform. On posix they are
+  // otherwise literal filename characters, so 'app/..\\..\\x' would resolve
+  // to a single oddly named file inside the repo instead of being seen as a
+  // traversal, and the protected-path rules would be checked against it.
+  const posixRequested = requested.replace(/\\/g, '/')
+  // Windows drive-letter paths ('C:/...', 'C:foo') never name a repo file.
+  // On posix, path.resolve would join them under the repo root as if they
+  // were relative, so refuse them explicitly.
+  if (/^[a-zA-Z]:/.test(posixRequested)) return null
+  const resolved = path.resolve(repoRoot, posixRequested)
   const relative = path.relative(repoRoot, resolved)
   // Escapes the repo (absolute elsewhere or ../) are always refused.
-  if (relative.startsWith('..') || path.isAbsolute(relative)) return null
+  if (relative === '..' || relative.startsWith('..' + path.sep) || path.isAbsolute(relative)) return null
   return relative.split(path.sep).join('/')
 }
 
